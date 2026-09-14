@@ -192,23 +192,23 @@ export function exportPresentationPptx(): void {
 
   const features = [
     {
-      title: '1. Excel 全工作表解析與分頁自選',
-      desc: '支援解析含多個 Sheet 之 Excel，可自選單一工作表或「全部工作表 (All Sheets)」，自動匹配 20 個車站/車廠分流填入。',
+      title: '1. Excel 智慧分站與「全部站點」一頁一站',
+      desc: '上傳 Excel 自動識別所有站點資料並切換「全部站點」模式，直接在畫面上垂直滾動預覽所有站點（一頁一站），支援直接列印畫面。',
       color: COLOR_EMERALD,
     },
     {
-      title: '2. 工作描述自動標準化規範',
-      desc: '自動轉化：MR TPB ECS-Electro-thermal linked fire damper ➔ thermal linked fire damper，以及 ACC ➔ AIR-COOLED CHILLER。',
+      title: '2. WORK DESCRIPTION 自動整齊與全大寫規範',
+      desc: '工作描述文字自動整齊排版，英文字母全面自動轉為標準大寫 (ALL CAPS)，並自動套用港鐵專用字典（如 ACC 轉為 AIR-COOLED CHILLER）。',
       color: '0284C7', // Sky blue
     },
     {
-      title: '3. 線上電子手簽與印章上傳',
-      desc: 'Prepared / Verified / Endorsed 支援觸控手寫與透明印章上傳，並具備「一鍵同步套用至全線 20 個站點」功能。',
+      title: '3. 嚴格一頁 A4 比例動態縮放算法',
+      desc: '每個 REPORT 嚴格鎖定 198mm A4 橫向限高，根據子列數量動態計算行距與文字尺寸，自動最適化縮成一頁 A4，杜絕跨頁與截斷。',
       color: COLOR_AMBER,
     },
     {
-      title: '4. 全車站一鍵匯出 (一站一頁 PDF)',
-      desc: '支援一鍵匯出所有站點報告，嚴格遵循「一站名一頁 A4 橫向」規範，格式工整統一，直接滿足呈核與歸檔標準。',
+      title: '4. 多重線上電子簽署與全線 20 站同步',
+      desc: 'Prepared By、Verified By、Endorsed By 完整支援觸控手寫板簽名與透明印章圖檔上傳，並支援一鍵同步套用至全線 20 個車站。',
       color: '9333EA', // Purple
     },
   ];
@@ -227,12 +227,12 @@ export function exportPresentationPptx(): void {
 
     slide3.addText(feat.title, {
       x: x + 0.3, y: y + 0.3, w: 4.8, h: 0.4,
-      fontSize: 16, fontFace: 'Microsoft JhengHei', bold: true, color: feat.color,
+      fontSize: 15, fontFace: 'Microsoft JhengHei', bold: true, color: feat.color,
     });
 
     slide3.addText(feat.desc, {
       x: x + 0.3, y: y + 0.8, w: 4.8, h: 1.1,
-      fontSize: 13, fontFace: 'Microsoft JhengHei', color: COLOR_DARK, lineSpacing: 18,
+      fontSize: 12, fontFace: 'Microsoft JhengHei', color: COLOR_DARK, lineSpacing: 18,
     });
   });
 
@@ -253,10 +253,10 @@ export function exportPresentationPptx(): void {
   });
 
   const steps = [
-    { num: '1', title: '選擇車廠或站點', desc: '切換 20 個車站分頁或直接導入自動切換。', color: COLOR_RED },
-    { num: '2', title: '上傳 Excel & 選表', desc: '上傳 Excel，可選單一工作表或全部分頁。', color: COLOR_EMERALD },
-    { num: '3', title: '確認比對與線上簽署', desc: '自動標準化工作描述，點擊欄位手寫或上傳簽名。', color: '0284C7' },
-    { num: '4', title: '一鍵匯出 (一站一頁)', desc: '點擊匯出全部或個別站點，輸出高解析度 A4 PDF。', color: '9333EA' },
+    { num: '1', title: '選擇站點或全部站點', desc: '可選單站（如 LAK、SHD）或首個「全部站點 (一頁一站)」總覽模式。', color: COLOR_RED },
+    { num: '2', title: '上傳 Excel 自動轉各站', desc: '上傳 Excel，系統自動解析並轉成所有站點內容（一頁一站）。', color: COLOR_EMERALD },
+    { num: '3', title: '頁面預覽、全大寫與簽署', desc: '畫面上滾動預覽每站，文字自動整齊全大寫，下方支援手寫或圖章簽核。', color: '0284C7' },
+    { num: '4', title: '直接列印或匯出全部', desc: '一鍵「列印畫面」或「匯出全部」，每份 REPORT 嚴格縮成一頁 A4 橫向。', color: '9333EA' },
   ];
 
   steps.forEach((st, idx) => {
@@ -296,7 +296,7 @@ export function exportPresentationPptx(): void {
     fill: { color: 'ECFDF5' },
     line: { color: 'A7F3D0', width: 1 },
   });
-  slide4.addText('💡 自動填入狀態追蹤：各站即時顯示「WO 已填」統計數字，支援清空本站或保留預設，比對狀況一目了然', {
+  slide4.addText('💡 介面精簡升級：整合單一「清空資料 (Clear Data)」按鈕，微調面板俐落收納，操作流暢無冗餘', {
     x: 1.0, y: 6.3, w: 11.2, h: 0.4,
     fontSize: 12, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_EMERALD,
   });
@@ -319,20 +319,20 @@ export function exportPresentationPptx(): void {
 
   const rules = [
     {
-      title: '// 工作描述標準化規則 (Fire Damper)',
-      kw: 'MR TPB ECS-Electro-thermal linked fire damper ➔ thermal linked fire damper\nMR TPB ECS-Fusible linked fire damper ➔ Fusible linked fire damper',
+      title: '// 1. WORK DESCRIPTION 整齊排版與全大寫',
+      kw: '英文全面自動轉為標準大寫 (ALL CAPS)\n自動清除前後標點空格，統一詞彙間距，工單報表美觀一致',
     },
     {
-      title: '// 工作描述標準化規則 (Air-Cooled Chiller)',
-      kw: 'ACC ➔ AIR-COOLED CHILLER\n（依據港鐵工程維護規範自動替換縮寫，防範人工筆誤）',
+      title: '// 2. 嚴格一頁 A4 比例動態縮放算法',
+      kw: '限高鎖定 198mm：針對每站設備多子列數量動態計算列高與間距\n列印與匯出嚴格保證一頁一站，杜絕換行溢出與截斷',
     },
     {
-      title: '// 冷凍水泵 & 風櫃 (CWP / AHU)',
-      kw: '匹配關鍵字：CWP, CHP, MUP, MWP, MR-SHD-CP, AIR HANDLING, ECS-AHU',
+      title: '// 3. 專用詞彙標準化 (Chiller & Fire Damper)',
+      kw: 'ACC ➔ AIR-COOLED CHILLER\nMR TPB ECS-Electro-thermal linked fire damper ➔ thermal linked fire damper',
     },
     {
-      title: '// 控制櫃 & 化學加藥 (MCP / CDU / PU)',
-      kw: '匹配關鍵字：MOTOR CONTROL PANEL, MCC-MCP, CHEM. DOSING, CDU, PU',
+      title: '// 4. 設備精確比對關鍵字',
+      kw: '水泵風櫃：CWP, CHP, MUP, MWP, ECS-AHU\n控制電櫃：MOTOR CONTROL PANEL, MCC-MCP, CDU',
     },
   ];
 
@@ -359,7 +359,7 @@ export function exportPresentationPptx(): void {
     });
   });
 
-  slide5.addText('✨ 支援同一設備項目自動填入多筆 PM W/O（獨立換行呈現，100% 容錯與自動正規化）', {
+  slide5.addText('✨ 支援同一設備項目自動填入多筆 PM W/O（獨立換行呈現，100% 格式規範保障）', {
     x: 0.8, y: 6.3, w: 11.6, h: 0.4,
     fontSize: 12, fontFace: 'Microsoft JhengHei', bold: true, color: '38BDF8',
   });
@@ -371,11 +371,11 @@ export function exportPresentationPptx(): void {
   const slide6 = pptx.addSlide();
   slide6.background = { color: COLOR_BG };
 
-  slide6.addText('五、電子簽名與全站點一站一頁輸出', {
+  slide6.addText('五、多重電子簽章與全站點預覽列印', {
     x: 0.8, y: 0.6, w: 11.0, h: 0.5,
     fontSize: 22, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_DARK,
   });
-  slide6.addText('Digital Signature & Multi-Station PDF Sheet Export', {
+  slide6.addText('Digital Signature & All Stations Online Preview & Print', {
     x: 0.8, y: 1.1, w: 11.0, h: 0.3,
     fontSize: 12, color: COLOR_SLATE,
   });
@@ -391,22 +391,22 @@ export function exportPresentationPptx(): void {
     fontSize: 16, fontFace: 'Microsoft JhengHei', bold: true, color: '4F46E5',
   });
   slide6.addText(
-    '• 觸控手寫簽署：內建平滑 Canvas 手寫板，可調粗細與筆觸色彩 (藍/黑/紅)。\n\n• 圖檔印章上傳：支援透明背景之 PNG/JPG 簽名檔或工程職章。\n\n• 一鍵全線同步：可勾選「同步套用至全線 20 個站點」，一次簽署全面生效。\n\n• 未簽署自動空白：無縫兼顧列印紙本手簽或純電子歸檔流程。',
+    '• 觸控手寫簽署：內建平滑 Canvas 手寫板，支援自選線條粗細與筆觸色彩 (藍/黑/紅)。\n\n• 圖檔印章上傳：支援透明背景之 PNG/JPG 簽名檔或工程職章。\n\n• 一鍵全線同步：可勾選「同步套用至全線 20 個站點」，一次簽署全面生效。\n\n• 未簽署自動空白：無縫兼顧列印紙本手簽或純電子歸檔流程。',
     { x: 1.1, y: 2.7, w: 5.0, h: 3.3, fontSize: 13, fontFace: 'Microsoft JhengHei', color: COLOR_DARK, lineSpacing: 20 }
   );
 
-  // Right card: Multi-station export
+  // Right card: Multi-station export & Online preview
   slide6.addShape(SHAPES.RECTANGLE, {
     x: 6.8, y: 1.8, w: 5.6, h: 4.5,
     fill: { color: COLOR_WHITE },
     line: { color: 'E9D5FF', width: 1 },
   });
-  slide6.addText('一鍵匯出全站點 PDF (一站一頁 PDF Sheet)', {
+  slide6.addText('「全部站點」線上即時預覽與直接列印 (一頁一站)', {
     x: 7.1, y: 2.1, w: 5.0, h: 0.4,
     fontSize: 16, fontFace: 'Microsoft JhengHei', bold: true, color: '9333EA',
   });
   slide6.addText(
-    '• 嚴格一站一頁：無論匯出 5 站或 20 站，每一車站獨立佔用完整 A4 橫向一頁，絕不跨頁錯位。\n\n• 背景多頁編譯引擎：隱藏畫布高解析度渲染各站報表，自動合併為單一多頁 PDF。\n\n• 極速批量處理：省去逐站手動導出的繁複勞動，全線 20 站點 30 秒內全數輸出完成。\n\n• 自動標準檔名：MTR_PM_Reports_All_Stations_2026.pdf',
+    '• 線上捲動全站預覽：上傳 Excel 後自動轉成所有站點，在主畫面一次向下預覽所有站點報表。\n\n• 直接列印畫面：支援點擊「列印畫面」直接呼叫系統列印，嚴格分頁每站自動縮成一頁 A4 橫向。\n\n• 一鍵批次匯出 PDF：全線 20 個站點 30 秒內自動編譯為單一高品質多頁合輯 PDF。\n\n• 自動標準檔名：MTR_PM_Reports_All_Stations_2026.pdf',
     { x: 7.1, y: 2.7, w: 5.0, h: 3.3, fontSize: 13, fontFace: 'Microsoft JhengHei', color: COLOR_DARK, lineSpacing: 20 }
   );
 

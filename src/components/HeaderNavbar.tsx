@@ -18,7 +18,6 @@ import {
 
 interface Props {
   onUploadExcelClick: () => void;
-  onClearTmdTwdPhdClick?: () => void;
   onSaveToArchiveClick: () => void;
   onOpenArchiveHistoryClick: () => void;
   onExportPdfClick: () => void;
@@ -33,7 +32,6 @@ interface Props {
 
 export const HeaderNavbar: React.FC<Props> = ({
   onUploadExcelClick,
-  onClearTmdTwdPhdClick,
   onSaveToArchiveClick,
   onOpenArchiveHistoryClick,
   onExportPdfClick,
@@ -201,21 +199,6 @@ export const HeaderNavbar: React.FC<Props> = ({
                 </button>
 
                 <div className="my-1 border-t border-slate-100" />
-
-                {onClearTmdTwdPhdClick && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMoreOpen(false);
-                      onClearTmdTwdPhdClick();
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-amber-50 text-amber-800 flex items-center gap-2 transition-colors cursor-pointer"
-                    title="清空 TMD/TWD/PHD 車廠的 PM W/O 及工單描述"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                    <span>清空 TMD/TWD/PHD 預設內容</span>
-                  </button>
-                )}
 
                 {onOpenPptClick && (
                   <button

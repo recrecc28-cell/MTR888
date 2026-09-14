@@ -172,9 +172,21 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">2. 工作描述自動標準化規範</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">2. WORK DESCRIPTION 自動整齊與全大寫規範</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                內建規範字典：自動將 <code className="text-sky-700 bg-sky-50 px-1 rounded">MR TPB ECS-Electro-thermal linked fire damper</code> 轉為 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">thermal linked fire damper</code>、<code className="text-sky-700 bg-sky-50 px-1 rounded">Fusible linked fire damper</code> 以及 <code className="text-sky-700 bg-sky-50 px-1 rounded">ACC</code> 轉為 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">AIR-COOLED CHILLER</code>。
+                工作描述文字自動整齊排版，英文字母全面自動轉為標準大寫 (ALL CAPS)，並自動套用港鐵專用字典（如 <code className="text-sky-700 bg-sky-50 px-1 rounded">ACC</code> 轉為 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">AIR-COOLED CHILLER</code>），無須人工二次排版。
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-start gap-3.5">
+            <div className="p-2.5 bg-indigo-100 text-indigo-700 rounded-lg shrink-0">
+              <Layout className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">3. 每個 REPORT 列印嚴格自動縮成一頁 A4 比例</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                系統根據設備子列數量自動動態計算行距與文字尺寸，鎖定 198mm 限高，無論資料多寡均自動最適化縮成精準一頁 A4 比例，徹底告別跨頁與截斷問題。
               </p>
             </div>
           </div>
@@ -184,9 +196,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <PenTool className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">3. 線上電子手簽與印章上傳</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">4. 線上電子手簽與印章上傳 (多重簽核)</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Prepared By、Verified By、Endorsed By 支援觸控手寫板簽署與透明圖檔上傳，並具備「一鍵套用至全線 20 個站點」功能，大幅節省簽核時間。
+                Prepared By、Verified By、Endorsed By 完整支援平滑手寫簽名與圖檔印章上傳，並具備「一鍵同步至全線 20 個站點」功能，大幅節省簽核時間。
               </p>
             </div>
           </div>
@@ -196,9 +208,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">4. 全車站一鍵匯出 (一站一頁 PDF Sheet)</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">5. 選擇站點「全部站點」線上即時預覽與直接列印</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                支援一鍵匯出所有具備資料之站點 PDF，嚴格保證「一站名一頁 A4 橫向」，版面整齊劃一，直接滿足呈核與歸檔需求。
+                站點選單首項提供「全部站點」，上傳 Excel 後自動轉為所有站點內容（一頁一站），使用者可直接在畫面上垂直滾動預覽所有站點並直接列印輸出。
               </p>
             </div>
           </div>
@@ -221,9 +233,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-red-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   1
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">選擇車廠或站點</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">選擇站點或「全部站點」</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  點擊切換 20 個車站/車廠（如 LAK、SHD、TWD 等）或直接導入自動切換。
+                  可選擇單一站點（如 LAK、SHD），或選擇首個「全部站點 (一頁一站)」總覽模式。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-red-600 font-medium">
@@ -236,9 +248,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   2
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">上傳 Excel & 選表</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">上傳 Excel 自動轉成各站</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  拖曳上傳 Excel，可自選個別工作表或「全部工作表 (All Sheets)」批次導入。
+                  拖曳上傳 Excel，系統智慧解析各車站資料，自動將所有站點轉成一站一頁內容。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-emerald-600 font-medium">
@@ -251,9 +263,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   3
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">確認比對與線上簽署</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">頁面預覽、全大寫與簽署</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  自動標準化描述，檢視 PM W/O，並點擊下方簽名格進行手寫簽名或圖檔印章。
+                  在頁面上即時預覽每站內容，文字自動整齊全大寫，並在下方手寫或上傳簽核樣式。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-sky-600 font-medium">
@@ -266,9 +278,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   4
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">一鍵匯出 (一站一頁)</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">直接列印或匯出 PDF</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  點擊「匯出全部 (一站一頁)」或個別導出，完整符合 A4 橫向呈核規範。
+                  直接點擊「列印畫面」或「匯出全部」，每個 REPORT 自動縮成一頁 A4 比例輸出。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-purple-600 font-medium">
@@ -280,10 +292,10 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
             <div className="flex items-center gap-2 font-semibold">
               <Sparkles className="w-4 h-4 text-emerald-600" />
-              <span>自動填入狀態追蹤：頂部及各站即時顯示填入筆數，一鍵清空 TMD/TWD/PHD 預設內容</span>
+              <span>介面精簡升級：整合單一「清空資料 (Clear Data)」按鈕，微調面板俐落收納，操作流暢無冗餘</span>
             </div>
             <span className="bg-white px-2 py-0.5 rounded border border-emerald-300 font-bold">
-              極簡操作
+              極簡高效
             </span>
           </div>
         </div>
@@ -309,46 +321,48 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs overflow-y-auto">
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-amber-400 font-bold block mb-1">
-                // 工作描述標準化規則 1 & 2 (Fire Damper)
+              <span className="text-emerald-400 font-bold block mb-1">
+                // 1. WORK DESCRIPTION 整齊排版與全大寫規範
               </span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
+                • <code className="text-amber-300">英文自動全部大寫 (ALL CAPS)</code>：無論 Excel 原稿大小寫如何混雜，系統一律自動規範為全大寫。<br />
+                • <code className="text-amber-300">整齊排版</code>：自動清除首尾多餘標點空格，統一詞彙間距，工單報表美觀一致。
+              </p>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+              <span className="text-emerald-400 font-bold block mb-1">
+                // 2. 嚴格一頁 A4 比例縮放算法 (Single-Page Fitting)
+              </span>
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                • <code className="text-sky-300">限高鎖定 198mm</code>：針對每站設備多子列數量動態計算每列高度與邊距。<br />
+                • <code className="text-sky-300">列印與匯出保證一頁一站</code>：杜絕任何換行溢出、文字跨頁截斷問題。
+              </p>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+              <span className="text-amber-400 font-bold block mb-1">
+                // 3. 專用詞彙標準化 (Chiller & Fire Damper)
+              </span>
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                • <code className="text-rose-300">ACC</code> ➔ <code className="text-emerald-300 font-bold">AIR-COOLED CHILLER</code><br />
                 • <code className="text-rose-300">MR TPB ECS-Electro-thermal linked fire damper</code><br />
-                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">thermal linked fire damper</code><br />
-                • <code className="text-rose-300">MR TPB ECS-Fusible linked fire damper</code><br />
-                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">Fusible linked fire damper</code>
+                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">thermal linked fire damper</code>
               </p>
             </div>
 
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-amber-400 font-bold block mb-1">
-                // 工作描述標準化規則 3 (Chiller)
-              </span>
+              <span className="text-sky-400 font-bold block mb-1">// 4. 設備精確比對關鍵字</span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                • <code className="text-rose-300">ACC</code><br />
-                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">AIR-COOLED CHILLER</code><br />
-                （嚴格依據港鐵工程維護規範自動替換縮寫）
-              </p>
-            </div>
-
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-sky-400 font-bold block mb-1">// 冷凍水泵 & 風櫃機組 (CWP / AHU)</span>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                匹配關鍵字：<code className="text-emerald-300">CWP, CHP, MUP, MWP, MR-SHD-CP, AIR HANDLING, ECS-AHU</code>
-              </p>
-            </div>
-
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-sky-400 font-bold block mb-1">// 控制櫃 & 化學加藥 (MCP / CDU / PU)</span>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                匹配關鍵字：<code className="text-emerald-300">MOTOR CONTROL PANEL, MCC-MCP, CHEM. DOSING, CDU, PU</code>
+                • 水泵風櫃：<code className="text-emerald-300">CWP, CHP, MUP, MWP, ECS-AHU</code><br />
+                • 控制電櫃：<code className="text-emerald-300">MOTOR CONTROL PANEL, MCC-MCP, CDU</code>
               </p>
             </div>
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-            <span>支援同一設備項目自動填入多筆 PM W/O（獨立換行呈現）</span>
-            <span className="text-emerald-400 font-semibold">100% 容錯與自動規範</span>
+            <span>支援同一設備自動填入多筆 PM W/O（獨立換行呈現），字體比例自動最適化</span>
+            <span className="text-emerald-400 font-semibold">100% 格式規範保障</span>
           </div>
         </div>
       ),
@@ -357,9 +371,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
     // Slide 6: Digital Signature & Batch Export
     {
       id: 6,
-      title: '五、電子簽名與全站點一站一頁輸出',
-      subtitle: 'Digital Signature & Multi-Station PDF Sheet Export',
-      category: '數位簽核 Digital Signature',
+      title: '五、多重電子簽章與全站點預覽列印',
+      subtitle: 'Digital Signature & All Stations Online Preview & Print',
+      category: '數位簽核與預覽 Signature & All Stations Preview',
       type: 'standard',
       content: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 h-full items-center">
@@ -372,20 +386,20 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <ul className="text-xs text-slate-600 space-y-2.5 leading-relaxed">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>觸控手寫簽署：</strong>內建平滑 Canvas 手寫板，可自由切換粗細 (細/中/粗) 及筆觸顏色 (深藍/黑/紅)。</span>
+                  <span><strong>觸控手寫簽署：</strong>內建平滑 Canvas 手寫板，支援自選線條粗細 (細/中/粗) 與筆觸顏色。</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>圖檔印章上傳：</strong>支援 PNG/JPG 格式之簽名檔或工程職章透明圖檔上傳。</span>
+                  <span><strong>圖檔印章上傳：</strong>支援 PNG/JPG 簽名檔或工程透明職章直接上傳套入。</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                  <span><strong>一鍵同步全線：</strong>勾選「同步套用至全線 20 個車站/車廠」，只需簽署一次即可套用全線。</span>
+                  <span><strong>一鍵同步全線：</strong>勾選「同步套用至全線 20 個車站/車廠」，只需簽名一次即刻套用全線。</span>
                 </li>
               </ul>
             </div>
             <div className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 mt-3">
-              ✨ 簽名直接精準嵌入報告對應格中，未簽署時保持空白，兼顧列印手簽與電子流程。
+              ✨ 簽名直接精準嵌入報告三欄簽核格中，未簽署時保持空白便於列印後手簽。
             </div>
           </div>
 
@@ -393,20 +407,20 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <div>
               <div className="flex items-center gap-2 text-purple-600 font-bold text-base mb-3">
                 <Layers className="w-5 h-5" />
-                <span>一鍵匯出全站點 PDF (一站一頁 PDF Sheet)</span>
+                <span>「全部站點」線上即時預覽與直接列印 (一頁一站)</span>
               </div>
               <ul className="text-xs text-slate-600 space-y-2.5 leading-relaxed">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>嚴格一站一頁：</strong>無論匯出 5 站或 20 站，每一車站獨立佔用完整 A4 橫向一頁，絕對不跨頁重疊。</span>
+                  <span><strong>線上捲動全站預覽：</strong>上傳 Excel 後自動轉成所有站點，在主畫面一次向下預覽所有站點報表。</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>背景多頁編譯引擎：</strong>透過隱藏畫布同步渲染各站報表，一鍵生成多頁高品質合輯 PDF。</span>
+                  <span><strong>直接列印畫面：</strong>支援點擊「列印畫面」直接呼叫系統列印，嚴格分頁每站自動縮成一頁 A4 橫向。</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-                  <span><strong>極速批量處理：</strong>免去逐個車站手動切換導出的重複性勞動，20 個站點 30 秒內全數輸出完成。</span>
+                  <span><strong>一鍵批次匯出 PDF：</strong>全線 20 個站點 30 秒內自動編譯為單一高品質多頁合輯 PDF。</span>
                 </li>
               </ul>
             </div>

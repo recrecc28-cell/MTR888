@@ -46,6 +46,8 @@ export const FineTunePanel: React.FC<Props> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 text-slate-900 shadow-2xl transition-all duration-300 no-print">
       {/* Header bar / Toggle handle */}
@@ -80,17 +82,10 @@ export const FineTunePanel: React.FC<Props> = ({
           <button
             type="button"
             onClick={onToggleOpen}
-            className="px-3 py-1 text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white font-bold rounded shadow-xs transition-colors flex items-center gap-1"
+            className="px-2.5 py-1 text-xs font-medium bg-slate-200 hover:bg-slate-300 text-slate-700 rounded transition-colors flex items-center gap-1 cursor-pointer"
+            title="關閉微調面板"
           >
-            {isOpen ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5" /> 隱藏微調面板
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5" /> 顯示微調面板
-              </>
-            )}
+            <span>✕ 關閉</span>
           </button>
         </div>
       </div>

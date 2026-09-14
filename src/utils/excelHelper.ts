@@ -4,48 +4,98 @@ import { MaintenanceReportData, MaintenanceItem } from '../types';
 import { ALL_MTR_LOCATIONS, getLocationTitle, getLocationByCode } from '../data/mtrLocations';
 
 export const STANDARD_MTR_ITEMS = [
-  'Air Handling Unit /Primary Air Handling Unit',
-  'Fan Coil Unit',
+  'AIR HANDLING UNIT / PRIMARY AIR HANDLING UNIT',
+  'FAN COIL UNIT',
   'AIR-COOLED CHILLER',
-  'Water Cooled Chiller',
-  'Chilled Water Pump',
-  'Cooling Tower',
-  'Sea Water Pump',
-  'Air Compressor',
-  'Chlorination Plant',
-  'Chlorination Degas Cyclone',
-  'Oxidation-Reduction Potential System',
-  'Sea Water Intake Screen',
-  'Washable Panel Filter',
-  'Chem. Dosing Unit',
-  'Motor Control Centre',
-  'Motor Control Panel',
-  'Differential By-pass Valve & Control',
-  'Disposal Bag Filter',
-  'Chemical Feed Tank',
-  'F & E Tank',
-  'Make Up Water Tank',
-  'Metering Pump',
-  'Presurization Unit',
-  'Plate Heat Exchanger',
-  'Pipework',
-  'Motorised Operated Valve',
-  'Valve',
-  'Sensor',
-  'Flexible Connection',
-  'Pipework Insulation',
-  'thermal linked fire damper',
-  'Fusible linked fire damper',
-  'Motorised Operated Damper',
-  'Smoke Extraction System',
-  'Smoke Extraction Fan',
-  'VAC System',
+  'WATER COOLED CHILLER',
+  'CHILLED WATER PUMP',
+  'COOLING TOWER',
+  'SEA WATER PUMP',
+  'AIR COMPRESSOR',
+  'CHLORINATION PLANT',
+  'CHLORINATION DEGAS CYCLONE',
+  'OXIDATION-REDUCTION POTENTIAL SYSTEM',
+  'SEA WATER INTAKE SCREEN',
+  'WASHABLE PANEL FILTER',
+  'CHEM. DOSING UNIT',
+  'MOTOR CONTROL CENTRE',
+  'MOTOR CONTROL PANEL',
+  'DIFFERENTIAL BY-PASS VALVE & CONTROL',
+  'DISPOSAL BAG FILTER',
+  'CHEMICAL FEED TANK',
+  'F & E TANK',
+  'MAKE UP WATER TANK',
+  'METERING PUMP',
+  'PRESURIZATION UNIT',
+  'PLATE HEAT EXCHANGER',
+  'PIPEWORK',
+  'MOTORISED OPERATED VALVE',
+  'VALVE',
+  'SENSOR',
+  'FLEXIBLE CONNECTION',
+  'PIPEWORK INSULATION',
+  'THERMAL LINKED FIRE DAMPER',
+  'FUSIBLE LINKED FIRE DAMPER',
+  'MOTORISED OPERATED DAMPER',
+  'SMOKE EXTRACTION SYSTEM',
+  'SMOKE EXTRACTION FAN',
+  'VAC SYSTEM',
 ];
+
+/**
+ * User Rule: WORK DESCRIPTION 文字內容自動整齊, 英名全部大寫
+ * - Electro-thermal linked fire damper -> THERMAL LINKED FIRE DAMPER
+ * - Fusible linked fire damper -> FUSIBLE LINKED FIRE DAMPER
+ * - ACC / Air Cooled Chiller -> AIR-COOLED CHILLER
+ * - All English names/characters automatically UPPERCASE & trimmed
+ */
+export function formatWorkDescriptionNeat(rawText: string): string {
+  if (!rawText) return '';
+  let res = String(rawText)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Strip leading prefixes like "MR TPB ECS-", "MR HTD ECS-", "MR-", "ECS-"
+  res = res
+    .replace(/^MR[\s\-]+[A-Z0-9]{3,4}[\s\-]+(?:ECS|BMS|FAS|PSD|MVAC|VAC|BEM|FPS)[\s\-/]+/i, '')
+    .replace(/^MR[\s\-]+[A-Z0-9]{3,4}[\s\-/]+/i, '')
+    .replace(/^MR[\s\-]+(?:ECS|BMS|FAS|PSD|MVAC|VAC|BEM|FPS)[\s\-/]+/i, '')
+    .replace(/^MR[\s\-]+/i, '')
+    .replace(/^[A-Z0-9]{3,4}[\s\-]+(?:ECS|BMS|FAS|PSD|MVAC|VAC|BEM|FPS)[\s\-/]+/i, '')
+    .replace(/^(?:ECS|BMS|FAS|PSD|MVAC|VAC|BEM|FPS)[\s\-/]+/i, '')
+    .trim();
+
+  // Strip trailing -ALL or ;ALL
+  res = res
+    .replace(/[\s\-–—;,]+ALL\s*[.]?$/i, '')
+    .replace(/\s+ALL\s*[.]?$/i, '')
+    .replace(/[\s\-–—;,]+\(ALL\)\s*$/i, '')
+    .trim();
+
+  // Specific rules
+  if (/^Electro[\s\-]+thermal\s+linked\s+fire\s+damper/i.test(res) || /^thermal\s+linked\s+fire\s+damper/i.test(res)) {
+    return 'THERMAL LINKED FIRE DAMPER';
+  }
+  if (/^Fusible\s+linked\s+fire\s+damper/i.test(res)) {
+    return 'FUSIBLE LINKED FIRE DAMPER';
+  }
+  if (/^ACC$/i.test(res) || /^ACC[\s\-]+AIR[\s\-]*COOLED[\s\-]*CHILLER/i.test(res) || /AIR[\s\-]+COOLED[\s\-]+CHILLER/i.test(res)) {
+    return 'AIR-COOLED CHILLER';
+  }
+
+  // Convert English characters to UPPERCASE
+  res = res.toUpperCase();
+
+  // Clean loose punctuation
+  res = res.replace(/^[,\-–—;:\s]+|[,\-–—;:\s]+$/g, '').trim();
+
+  return res;
+}
 
 /**
  * Intelligent keyword & acronym matcher for MTR Work Descriptions
  */
-export function matchStandardWorkDescription(rawText: string): string {
+function rawMatchStandardWorkDescription(rawText: string): string {
   if (!rawText) return '';
   const text = rawText.toUpperCase().trim();
 
@@ -536,6 +586,11 @@ export function matchStandardWorkDescription(rawText: string): string {
   return '';
 }
 
+export function matchStandardWorkDescription(rawText: string): string {
+  const matched = rawMatchStandardWorkDescription(rawText);
+  return formatWorkDescriptionNeat(matched);
+}
+
 /**
  * Extracts the meaningful maintenance work description from ASSET.DESCRIPTION column
  * User rule: "read inside the meaning work, belong to MTR job maintenance,
@@ -586,7 +641,7 @@ export function extractMeaningfulAssetWork(rawText: string): string {
     return cleaned;
   }
 
-  return trimmed;
+  return formatWorkDescriptionNeat(trimmed);
 }
 
 /**
@@ -626,23 +681,23 @@ function cleanAssetWorkString(str: string): string {
     return 'AIR-COOLED CHILLER';
   }
 
-  // User rule: MR TPB ECS-Electro-thermal linked fire damper = thermal linked fire damper
+  // User rule: MR TPB ECS-Electro-thermal linked fire damper = THERMAL LINKED FIRE DAMPER
   if (/^Electro[\s\-]+thermal\s+linked\s+fire\s+damper/i.test(res) || /^thermal\s+linked\s+fire\s+damper/i.test(res)) {
-    return 'thermal linked fire damper';
+    return 'THERMAL LINKED FIRE DAMPER';
   }
 
-  // User rule: MR TPB ECS-Fusible linked fire damper = Fusible linked fire damper
+  // User rule: MR TPB ECS-Fusible linked fire damper = FUSIBLE LINKED FIRE DAMPER
   if (/^Fusible\s+linked\s+fire\s+damper/i.test(res)) {
-    return 'Fusible linked fire damper';
+    return 'FUSIBLE LINKED FIRE DAMPER';
   }
 
   // If what remains is purely an acronym code (e.g. "ACC-1", "ACC", "WPF"), match standard item
   if (/^[A-Z0-9]{2,6}(?:[-_]\d+)?$/i.test(res)) {
     const std = matchStandardWorkDescription(res);
-    if (std) return std;
+    if (std) return formatWorkDescriptionNeat(std);
   }
 
-  return res;
+  return formatWorkDescriptionNeat(res);
 }
 
 /**
@@ -940,10 +995,10 @@ export function cleanWorkDescription(rawText: string): string {
   // If after cleaning it matches standard list, use standard
   const matched = matchStandardWorkDescription(cleaned);
   if (matched && matched !== cleaned) {
-    return matched;
+    return formatWorkDescriptionNeat(matched);
   }
 
-  return cleaned || rawText.trim();
+  return formatWorkDescriptionNeat(cleaned || rawText);
 }
 
 const DEFAULT_QTY_MAP: Record<string, string> = {
@@ -1384,10 +1439,11 @@ export function parseGenericTableRows(
     }
 
     const itemIndex = stationItemsMap[itemStation].length + 1;
+    const neatWorkDesc = formatWorkDescriptionNeat(workDescription);
     const item: MaintenanceItem = {
       id: `item-${itemStation}-${itemIndex}`,
       station: itemStation,
-      workDescription, // cleaned meaningful description
+      workDescription: neatWorkDesc, // cleaned meaningful description (neat & UPPERCASE)
       pmWo: wonum, // PM W/O = WONUM
       qty: '1', // QTY=1 forever
       m: finalM,

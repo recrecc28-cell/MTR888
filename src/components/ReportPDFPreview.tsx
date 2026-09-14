@@ -1,6 +1,7 @@
 import React from 'react';
 import { MaintenanceReportData, FineTuneSettings, MaintenanceItem, SubWoEntry } from '../types';
 import { Plus, Trash2, PenTool } from 'lucide-react';
+import { formatWorkDescriptionNeat } from '../utils/excelHelper';
 
 interface Props {
   reportData: MaintenanceReportData;
@@ -57,9 +58,10 @@ export const ReportPDFPreview: React.FC<Props> = ({
 
   // Handle cell edit for top-level item attributes
   const handleItemChange = (id: string, field: keyof MaintenanceItem, value: string) => {
+    const finalVal = field === 'workDescription' ? formatWorkDescriptionNeat(value) : value;
     const updatedItems = items.map((item) => {
       if (item.id === id) {
-        return { ...item, [field]: value };
+        return { ...item, [field]: finalVal };
       }
       return item;
     });
@@ -246,22 +248,56 @@ export const ReportPDFPreview: React.FC<Props> = ({
     borderColor: fineTuneSettings.tableBorderColor,
   };
 
+  // Total sub-entries across all items to dynamically scale row height to fit 1 page A4
+  const totalSubRows = React.useMemo(() => {
+    return items.reduce((acc, it) => acc + (it.subEntries?.length || 1), 0);
+  }, [items]);
+
+  // Auto-scale to ensure 1 A4 page fit when printing:
+  // Dynamically shrink padding and font size if station has many rows
+  const effectivePaddingY = React.useMemo(() => {
+    if (totalSubRows > 22) return Math.min(fineTuneSettings.tableRowPaddingY, 0.8);
+    if (totalSubRows > 17) return Math.min(fineTuneSettings.tableRowPaddingY, 1.4);
+    if (totalSubRows > 12) return Math.min(fineTuneSettings.tableRowPaddingY, 2.0);
+    return fineTuneSettings.tableRowPaddingY;
+  }, [totalSubRows, fineTuneSettings.tableRowPaddingY]);
+
+  const effectiveCellSize = React.useMemo(() => {
+    if (totalSubRows > 22) return Math.min(fineTuneSettings.tableCellSize, 9.0);
+    if (totalSubRows > 17) return Math.min(fineTuneSettings.tableCellSize, 9.8);
+    if (totalSubRows > 12) return Math.min(fineTuneSettings.tableCellSize, 10.5);
+    return fineTuneSettings.tableCellSize;
+  }, [totalSubRows, fineTuneSettings.tableCellSize]);
+
+  const effectiveHeaderSize = React.useMemo(() => {
+    if (totalSubRows > 22) return Math.min(fineTuneSettings.tableHeaderSize, 9.5);
+    if (totalSubRows > 17) return Math.min(fineTuneSettings.tableHeaderSize, 10.2);
+    return fineTuneSettings.tableHeaderSize;
+  }, [totalSubRows, fineTuneSettings.tableHeaderSize]);
+
+  const effectiveSignatoryMarginTop = React.useMemo(() => {
+    if (totalSubRows > 20) return 6;
+    if (totalSubRows > 14) return 12;
+    return 20;
+  }, [totalSubRows]);
+
   const borderStyle = {
     border: `${fineTuneSettings.tableBorderWidth}px solid ${fineTuneSettings.tableBorderColor}`,
   };
 
   const cellPaddingStyle: React.CSSProperties = {
-    paddingTop: `${fineTuneSettings.tableRowPaddingY}px`,
-    paddingBottom: `${fineTuneSettings.tableRowPaddingY}px`,
+    paddingTop: `${effectivePaddingY}px`,
+    paddingBottom: `${effectivePaddingY}px`,
     paddingLeft: '4px',
     paddingRight: '4px',
-    fontSize: `${fineTuneSettings.tableCellSize}px`,
-    lineHeight: '1.25',
+    fontSize: `${effectiveCellSize}px`,
+    lineHeight: '1.2',
   };
 
   const signatoryStyle: React.CSSProperties = {
     transform: `translate(${fineTuneSettings.signatoryOffsetX}px, ${fineTuneSettings.signatoryOffsetY}px)`,
     fontSize: `${fineTuneSettings.footerTextSize}px`,
+    marginTop: `${effectiveSignatoryMarginTop}px`,
   };
 
   // Editable inline text component
@@ -383,11 +419,11 @@ export const ReportPDFPreview: React.FC<Props> = ({
         </div>
 
         {/* --- TABLE SECTION --- */}
-        <div style={tableStyle} className="mb-6 relative z-10">
+        <div style={tableStyle} className="mb-3 relative z-10">
           <table className="w-full text-left" style={{ borderCollapse: 'collapse' }}>
             <thead>
               {/* Row 1 Header */}
-              <tr className="text-center font-bold" style={{ fontSize: `${fineTuneSettings.tableHeaderSize}px` }}>
+              <tr className="text-center font-bold" style={{ fontSize: `${effectiveHeaderSize}px` }}>
                 <th
                   style={{ ...borderStyle, width: '8%' }}
                   rowSpan={3}
@@ -427,7 +463,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
               </tr>
 
               {/* Row 2 Sub-Header: ECS */}
-              <tr className="text-center font-bold" style={{ fontSize: `${fineTuneSettings.tableHeaderSize}px` }}>
+              <tr className="text-center font-bold" style={{ fontSize: `${effectiveHeaderSize}px` }}>
                 <th
                   style={{ ...borderStyle, width: '45%' }}
                   colSpan={8}
@@ -539,8 +575,8 @@ export const ReportPDFPreview: React.FC<Props> = ({
                               className="align-middle pl-2 font-sans"
                             >
                               <EditableText
-                                value={item.workDescription}
-                                onChange={(val) => handleItemChange(item.id, 'workDescription', val)}
+                                value={formatWorkDescriptionNeat(item.workDescription)}
+                                onChange={(val) => handleItemChange(item.id, 'workDescription', formatWorkDescriptionNeat(val))}
                                 className="text-left font-normal"
                               />
                             </td>

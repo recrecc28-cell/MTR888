@@ -33,6 +33,7 @@ import {
   FileSpreadsheet,
   ClipboardPaste,
   Layers,
+  Printer,
 } from 'lucide-react';
 
 const STORAGE_KEY_REPORTS_MAP = 'mtr_pm_reports_v5_cleared_depots';
@@ -42,11 +43,11 @@ const STORAGE_KEY_ARCHIVES = 'mtr_pm_archives_history';
 const STORAGE_KEY_TMD_TWD_PHD_PURGED = 'mtr_cleared_tmd_twd_phd_done_v3';
 
 export default function App() {
-  // Active Station/Depot Tab - default to LAK
+  // Active Station/Depot Tab - default to LAK, or ALL for all stations
   const [currentDepot, setCurrentDepot] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_ACTIVE_DEPOT);
-      if (saved && getLocationByCode(saved)) {
+      if (saved === 'ALL' || (saved && getLocationByCode(saved))) {
         return saved;
       }
       return 'LAK';
@@ -54,6 +55,9 @@ export default function App() {
       return 'LAK';
     }
   });
+
+  // Filter mode when viewing all stations ('withData': only stations with rows, 'all': all 20 stations)
+  const [allStationsViewFilter, setAllStationsViewFilter] = useState<'withData' | 'all'>('withData');
 
   // Helper to clean phantom preset items (e.g. Air Cooled Chiller with no PM W/O, or empty items)
   const cleanPresetItems = (report: MaintenanceReportData): MaintenanceReportData => {
@@ -133,13 +137,44 @@ export default function App() {
     }
   });
 
+  // List of all stations that currently have items
+  const stationsWithData = useMemo(() => {
+    return Object.keys(reportsByDepot).filter(
+      (code) => (reportsByDepot[code]?.items?.length || 0) > 0
+    );
+  }, [reportsByDepot]);
+
+  // Stations to render in preview & print
+  const stationsToRender = useMemo(() => {
+    if (currentDepot !== 'ALL') {
+      return [currentDepot];
+    }
+    if (allStationsViewFilter === 'withData' && stationsWithData.length > 0) {
+      return stationsWithData;
+    }
+    return ALL_MTR_LOCATIONS.map((l) => l.code);
+  }, [currentDepot, allStationsViewFilter, stationsWithData]);
+
   // Current Active Report Data (empty by default)
   const reportData = useMemo(() => {
+    if (currentDepot === 'ALL') {
+      const firstAvailable = stationsWithData[0] || 'LAK';
+      return reportsByDepot[firstAvailable] || createEmptyReport(firstAvailable);
+    }
     return reportsByDepot[currentDepot] || createEmptyReport(currentDepot);
-  }, [reportsByDepot, currentDepot]);
+  }, [reportsByDepot, currentDepot, stationsWithData]);
 
   // Current Location Info
   const currentLocationInfo = useMemo(() => {
+    if (currentDepot === 'ALL') {
+      return {
+        code: 'ALL',
+        nameZh: '全部站點',
+        nameEn: 'All Stations',
+        title: '全部站點 (一頁一站)',
+        line: '全線總覽',
+      };
+    }
     return getLocationByCode(currentDepot);
   }, [currentDepot]);
 
@@ -426,43 +461,18 @@ export default function App() {
       return nextMap;
     });
 
-    if (targetCode !== currentDepot) {
-      setCurrentDepot(targetCode);
-    }
-
     const stationMapKeys = parsedData.reportsByStationMap
       ? Object.keys(parsedData.reportsByStationMap)
       : [];
     const count = stationMapKeys.length;
     if (count > 1) {
-      showToast(`成功匯入 ${fileName}：共識別 ${count} 個站點 (${stationMapKeys.slice(0, 4).join(', ')}${count > 4 ? '...' : ''})，可一鍵匯出所有站點 PDF！`);
+      setCurrentDepot('ALL');
+      showToast(`成功匯入 ${fileName}：已直接轉成所有 ${count} 個站點內容！已為您切換至「全部站點 (一頁一站)」預覽模式，可直接在頁面預覽並列印。`);
     } else {
+      if (currentDepot !== 'ALL') {
+        setCurrentDepot(targetCode);
+      }
       showToast(`成功匯入 ${fileName} (站點: ${targetCode})`);
-    }
-  };
-
-  // List of all stations that currently have items
-  const stationsWithData = useMemo(() => {
-    return Object.keys(reportsByDepot).filter(
-      (code) => (reportsByDepot[code]?.items?.length || 0) > 0
-    );
-  }, [reportsByDepot]);
-
-  // Clear TMD/TWD/PHD preset items (PM W/O & Work Description) keeping only station names
-  const handleClearTmdTwdPhd = () => {
-    if (
-      window.confirm(
-        '確定要清空 TMD、TWD、PHD 車廠的預設內容嗎？\n\n此操作將會：\n1. 刪除 TMD、TWD、PHD 的 PM W/O 及 WORK DESCRIPTION\n2. 只保留車站名稱，方便您導入新內容\n\n是否確定清空？'
-      )
-    ) {
-      setReportsByDepot((prev) => {
-        const nextMap = { ...prev };
-        ['TMD', 'TWD', 'PHD'].forEach((code) => {
-          nextMap[code] = createEmptyReport(code);
-        });
-        return nextMap;
-      });
-      showToast('已成功清空 TMD / TWD / PHD 預設內容！');
     }
   };
 
@@ -558,6 +568,22 @@ export default function App() {
   };
 
   const handleResetDefaultPdf = () => {
+    if (currentDepot === 'ALL') {
+      if (
+        window.confirm(
+          '確定要清空所有站點的資料嗎？\n此操作將會清空所有 20 個站點已填寫的設備與工單資料。'
+        )
+      ) {
+        const freshMap: Record<string, MaintenanceReportData> = {};
+        ALL_MTR_LOCATIONS.forEach((loc) => {
+          freshMap[loc.code] = createEmptyReport(loc.code);
+        });
+        setReportsByDepot(freshMap);
+        showToast('已清空所有站點資料！');
+      }
+      return;
+    }
+
     const loc = getLocationByCode(currentDepot);
     const locName = loc ? `${loc.nameZh} (${loc.code})` : currentDepot;
 
@@ -568,61 +594,32 @@ export default function App() {
     ) {
       const freshReport = createEmptyReport(currentDepot);
       setReportData(freshReport);
-      setFineTuneSettings(JSON.parse(JSON.stringify(defaultFineTuneSettings)));
       showToast(`已清空「${currentDepot}」表格資料！`);
     }
   };
 
-  const handleClearAllData = () => {
-    if (
-      window.confirm(
-        '⚠️ 警告：確定要清空所有資料嗎？(CLEAR ALL DATA)\n\n此操作將會：\n1. 清空所有 20 個車站/車廠已填寫的設備與工單資料\n2. 重置為完全空白的初始表格\n3. 重置所有版面微調參數\n\n此操作無法撤銷，是否確定執行？'
-      )
-    ) {
-      try {
-        localStorage.removeItem(STORAGE_KEY_REPORTS_MAP);
-        localStorage.removeItem('mtr_pm_reports_empty_v1');
-        localStorage.removeItem('mtr_pm_reports_by_depot_v6');
-        localStorage.removeItem('mtr_pm_reports_by_depot_v5');
-        localStorage.removeItem('mtr_pm_reports_by_depot_v4');
-        localStorage.removeItem('mtr_pm_reports_by_depot_v3');
-        localStorage.removeItem(STORAGE_KEY_FINETUNE);
-        localStorage.removeItem(STORAGE_KEY_ACTIVE_DEPOT);
-      } catch (e) {
-        console.error('Failed to clear storage', e);
-      }
-
-      const freshMap: Record<string, MaintenanceReportData> = {};
-      ALL_MTR_LOCATIONS.forEach((loc) => {
-        freshMap[loc.code] = createEmptyReport(loc.code);
-      });
-
-      setReportsByDepot(freshMap);
-      setCurrentDepot('LAK');
-      setFineTuneSettings(JSON.parse(JSON.stringify(defaultFineTuneSettings)));
-      showToast('已成功清空所有站點資料！');
-    }
-  };
-
   const handlePrint = () => {
-    printDocument('pdf-report-canvas');
+    window.print();
   };
 
   const handleSelectRegion = (code: string, newTitle: string) => {
     const targetCode = code.toUpperCase();
     setCurrentDepot(targetCode);
 
-    setReportsByDepot((prev) => {
-      if (!prev[targetCode]) {
-        return {
-          ...prev,
-          [targetCode]: createDefaultReport(targetCode),
-        };
-      }
-      return prev;
-    });
-
-    showToast(`已切換至 ${targetCode} 分頁 (${newTitle})`);
+    if (targetCode !== 'ALL') {
+      setReportsByDepot((prev) => {
+        if (!prev[targetCode]) {
+          return {
+            ...prev,
+            [targetCode]: createEmptyReport(targetCode),
+          };
+        }
+        return prev;
+      });
+      showToast(`已切換至 ${targetCode} 分頁 (${newTitle})`);
+    } else {
+      showToast('已切換至「全部站點 (一頁一站)」預覽模式');
+    }
   };
 
   return (
@@ -638,7 +635,6 @@ export default function App() {
       {/* Top Header Navbar: Simplified to Upload Excel, Export PDF, and clean More dropdown */}
       <HeaderNavbar
         onUploadExcelClick={() => setIsExcelUploadOpen(true)}
-        onClearTmdTwdPhdClick={handleClearTmdTwdPhd}
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
@@ -664,11 +660,21 @@ export default function App() {
                 value={currentDepot}
                 onChange={(e) => {
                   const code = e.target.value;
-                  const loc = getLocationByCode(code);
-                  handleSelectRegion(code, loc?.title || `MTRC Station - ${code}`);
+                  if (code === 'ALL') {
+                    setCurrentDepot('ALL');
+                    showToast('已切換至「全部站點 (一頁一站)」預覽模式');
+                  } else {
+                    const loc = getLocationByCode(code);
+                    handleSelectRegion(code, loc?.title || `MTRC Station - ${code}`);
+                  }
                 }}
                 className="px-2.5 py-1 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-xs font-bold text-emerald-800 focus:ring-1 focus:ring-emerald-500 focus:outline-none transition-colors cursor-pointer"
               >
+                <optgroup label="全站總覽 (All Stations)">
+                  <option value="ALL">
+                    全部站點 (All Stations ‧ 一頁一站預覽)
+                  </option>
+                </optgroup>
                 <optgroup label={`選擇站點 (${MTR_STATIONS_LIST.length})`}>
                   {MTR_STATIONS_LIST.map((loc) => (
                     <option key={loc.code} value={loc.code}>
@@ -692,9 +698,15 @@ export default function App() {
               <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600 border border-slate-200">
                 {currentLocationInfo?.line || '港鐵'}
               </span>
-              <span className="text-[11px] font-mono text-slate-600">
-                PM W/O 已填: <strong className="text-emerald-700 font-bold">{woStats[currentDepot]?.filled || 0}</strong> / {woStats[currentDepot]?.total || 0}
-              </span>
+              {currentDepot !== 'ALL' ? (
+                <span className="text-[11px] font-mono text-slate-600">
+                  PM W/O 已填: <strong className="text-emerald-700 font-bold">{woStats[currentDepot]?.filled || 0}</strong> / {woStats[currentDepot]?.total || 0}
+                </span>
+              ) : (
+                <span className="text-[11px] font-mono text-emerald-700 font-semibold">
+                  全線共 {stationsWithData.length} 個站點有工單資料 (共 {stationsToRender.length} 頁)
+                </span>
+              )}
 
               <span className="text-slate-300">‧</span>
 
@@ -721,13 +733,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right: Multi-Station Export, Reset, Clear All Data, Fine-Tune Toggle & Meta info */}
+          {/* Right: Multi-Station Export, Reset, Fine-Tune Toggle & Meta info */}
           <div className="flex items-center gap-2">
             <span className="hidden xl:inline text-xs text-slate-500 font-mono mr-1">
-              {reportData.reportMonthYear} ‧ {reportData.items.length} 項
+              {reportData.reportMonthYear}
             </span>
 
-            {/* Export All Stations Button (shown if more than 1 station has data) */}
+            {/* Export All Stations Button */}
             {stationsWithData.length > 1 && (
               <button
                 type="button"
@@ -740,26 +752,26 @@ export default function App() {
               </button>
             )}
 
+            {/* Print Button */}
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="列印目前畫面 (每個站點自動縮成一頁 A4)"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-700" />
+              <span>列印畫面</span>
+            </button>
+
             {/* Unified Clear Data Button (用戶要求: 清空本站和清空全部功能一樣, 只要其中一個按鈕就夠) */}
             <button
               type="button"
               onClick={handleResetDefaultPdf}
               className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="清空目前選取站點的表格工單資料 (Clear Data)"
+              title="清空目前選取站點或全部站點的表格工單資料 (Clear Data)"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-600" />
               <span>清空資料 (Clear Data)</span>
-            </button>
-
-            {/* Clear TMD/TWD/PHD Preset Button (User Directive: 不要清空 TMD/TWD/PHD 預設按鈕) */}
-            <button
-              type="button"
-              onClick={handleClearTmdTwdPhd}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="清空 TMD/TWD/PHD 車廠的 PM W/O 及 WORK DESCRIPTION 預設內容，只留車廠名"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
-              <span>清空 TMD/TWD/PHD 預設</span>
             </button>
 
             {/* Fine-Tune Toggle */}
@@ -780,14 +792,104 @@ export default function App() {
         </div>
 
         {/* Full-Width Live Editable PDF Preview Sheet */}
-        <div className="w-full relative">
-          <ReportPDFPreview
-            reportData={reportData}
-            fineTuneSettings={fineTuneSettings}
-            onUpdateReportData={setReportData}
-            isEditingEnabled={true}
-            onOpenSignatureModal={handleOpenSignatureModal}
-          />
+        <div className="w-full relative space-y-8">
+          {currentDepot === 'ALL' && (
+            <div className="no-print max-w-[1050px] mx-auto p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-950 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold text-emerald-900">
+                  全部站點預覽模式 (共 {stationsToRender.length} 站 ‧ 一頁一站)
+                </span>
+                <span className="text-emerald-700 hidden md:inline">
+                  已自動為您將所有站點轉成一頁一站，可向下滾動預覽每站內容，直接按「列印」或「匯出全部」輸出！
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-lg border border-emerald-300 p-0.5 bg-white text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setAllStationsViewFilter('withData')}
+                    className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                      allStationsViewFilter === 'withData'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-emerald-800 hover:bg-emerald-50'
+                    }`}
+                  >
+                    僅顯示有資料 ({stationsWithData.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAllStationsViewFilter('all')}
+                    className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                      allStationsViewFilter === 'all'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-emerald-800 hover:bg-emerald-50'
+                    }`}
+                  >
+                    顯示全部 20 站
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>列印全部</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {stationsToRender.map((stnCode, idx) => {
+            const stnReport = reportsByDepot[stnCode] || createEmptyReport(stnCode);
+            const locInfo = getLocationByCode(stnCode);
+            const canvasId = currentDepot === 'ALL' ? `pdf-station-${stnCode}` : 'pdf-report-canvas';
+
+            return (
+              <div
+                key={stnCode}
+                id={canvasId}
+                className="station-pdf-page relative"
+              >
+                {/* On-screen Station Header Banner when in ALL mode */}
+                {currentDepot === 'ALL' && (
+                  <div className="no-print max-w-[1050px] mx-auto mb-2 px-4 py-2 bg-slate-200/90 border border-slate-300 rounded-t-xl flex items-center justify-between text-xs text-slate-800 shadow-2xs">
+                    <div className="flex items-center gap-2.5 font-bold text-slate-900">
+                      <span className="w-6 h-6 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xs font-bold shadow-2xs">
+                        {idx + 1}
+                      </span>
+                      <span className="text-sm">
+                        第 {idx + 1} 頁：{stnCode} - {locInfo?.nameZh || stnCode} ({locInfo?.nameEn || ''})
+                      </span>
+                      <span className="text-xs font-normal text-slate-600">
+                        ‧ 共 {stnReport.items.length} 項設備
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectRegion(stnCode, locInfo?.title || stnCode)}
+                      className="px-3 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-300 hover:border-emerald-300 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                    >
+                      切換至此站單獨編輯
+                    </button>
+                  </div>
+                )}
+                <ReportPDFPreview
+                  reportData={stnReport}
+                  fineTuneSettings={fineTuneSettings}
+                  onUpdateReportData={(newData) => {
+                    setReportsByDepot((prev) => ({
+                      ...prev,
+                      [stnCode]: newData,
+                    }));
+                  }}
+                  isEditingEnabled={true}
+                  onOpenSignatureModal={handleOpenSignatureModal}
+                />
+              </div>
+            );
+          })}
         </div>
       </main>
 
