@@ -192,23 +192,23 @@ export function exportPresentationPptx(): void {
 
   const features = [
     {
-      title: '1. 智慧 Excel 保養清單解析',
-      desc: '支援上傳包含 WO_WONUM、ASSET.ASSETNUM 與 ASSET.DESCRIPTION 的保養工作 Excel，自動解析無須重組欄位。',
+      title: '1. Excel 全工作表解析與分頁自選',
+      desc: '支援解析含多個 Sheet 之 Excel，可自選單一工作表或「全部工作表 (All Sheets)」，自動匹配 20 個車站/車廠分流填入。',
       color: COLOR_EMERALD,
     },
     {
-      title: '2. 多工單智慧自動匹配',
-      desc: '內建設備匹配規則引擎，當單一設備對應多筆工單（如 5001618422 ~ 5001618426）時，自動依換行格式完整填入 PM W/O。',
+      title: '2. 工作描述自動標準化規範',
+      desc: '自動轉化：MR TPB ECS-Electro-thermal linked fire damper ➔ thermal linked fire damper，以及 ACC ➔ AIR-COOLED CHILLER。',
       color: '0284C7', // Sky blue
     },
     {
-      title: '3. 預覽畫面雙向即時微調',
-      desc: '可直接在 PDF 預覽畫面上點擊修改文字、調整工單號、變更數量與責任人，兼具微調彈性與直覺操作。',
+      title: '3. 線上電子手簽與印章上傳',
+      desc: 'Prepared / Verified / Endorsed 支援觸控手寫與透明印章上傳，並具備「一鍵同步套用至全線 20 個站點」功能。',
       color: COLOR_AMBER,
     },
     {
-      title: '4. 高清 A4 PDF 導出與歸檔',
-      desc: '符合 A4 橫向標準尺寸，支援直接列印或導出為高品質 PDF，並自動寫入 LocalStorage 與歷史存檔紀錄。',
+      title: '4. 全車站一鍵匯出 (一站一頁 PDF)',
+      desc: '支援一鍵匯出所有站點報告，嚴格遵循「一站名一頁 A4 橫向」規範，格式工整統一，直接滿足呈核與歸檔標準。',
       color: '9333EA', // Purple
     },
   ];
@@ -253,10 +253,10 @@ export function exportPresentationPptx(): void {
   });
 
   const steps = [
-    { num: '1', title: '選擇車廠與月份', desc: '點擊切換 SHD、TWD、KBD 或 LOW 等車廠分頁。', color: COLOR_RED },
-    { num: '2', title: '上傳保養 Excel', desc: '拖曳或選擇由 Maximo 導出的月保養清單 Excel。', color: COLOR_EMERALD },
-    { num: '3', title: '確認匹配與微調', desc: '檢查自動對應之 WO_WONUM 填入數量，必要時直接編輯。', color: '0284C7' },
-    { num: '4', title: '匯出 PDF / 歸檔', desc: '點擊「匯出 PDF 檔」或「自動歸檔」保留歷史紀錄。', color: '9333EA' },
+    { num: '1', title: '選擇車廠或站點', desc: '切換 20 個車站分頁或直接導入自動切換。', color: COLOR_RED },
+    { num: '2', title: '上傳 Excel & 選表', desc: '上傳 Excel，可選單一工作表或全部分頁。', color: COLOR_EMERALD },
+    { num: '3', title: '確認比對與線上簽署', desc: '自動標準化工作描述，點擊欄位手寫或上傳簽名。', color: '0284C7' },
+    { num: '4', title: '一鍵匯出 (一站一頁)', desc: '點擊匯出全部或個別站點，輸出高解析度 A4 PDF。', color: '9333EA' },
   ];
 
   steps.forEach((st, idx) => {
@@ -296,32 +296,44 @@ export function exportPresentationPptx(): void {
     fill: { color: 'ECFDF5' },
     line: { color: 'A7F3D0', width: 1 },
   });
-  slide4.addText('💡 自動填入狀態追蹤：每個車廠分頁均即時顯示「WO_WONUM 已填」統計數字，比對狀況一目了然', {
+  slide4.addText('💡 自動填入狀態追蹤：各站即時顯示「WO 已填」統計數字，支援清空本站或保留預設，比對狀況一目了然', {
     x: 1.0, y: 6.3, w: 11.2, h: 0.4,
     fontSize: 12, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_EMERALD,
   });
 
 
   // -------------------------------------------------------------
-  // SLIDE 5: MATCHING RULES
+  // SLIDE 5: MATCHING RULES & NORMALIZATION
   // -------------------------------------------------------------
   const slide5 = pptx.addSlide();
   slide5.background = { color: '0F172A' }; // Dark terminal theme
 
-  slide5.addText('四、智慧設備匹配規則引擎', {
+  slide5.addText('四、規則引擎與工作描述標準化規範', {
     x: 0.8, y: 0.6, w: 11.0, h: 0.5,
     fontSize: 22, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_WHITE,
   });
-  slide5.addText('Smart Equipment Matching Engine (excelHelper.ts)', {
+  slide5.addText('Smart Equipment Matching & Description Normalization (excelHelper.ts)', {
     x: 0.8, y: 1.1, w: 11.0, h: 0.3,
     fontSize: 12, color: '38BDF8',
   });
 
   const rules = [
-    { title: '// 冷凍水泵 (Chilled Water Pump)', kw: 'CWP, CHP, MUP, MWP, MR-SHD-CP, SHD-ECS-CHP' },
-    { title: '// 風櫃機組 (AHU / PAHU)', kw: 'AIR HANDLING, AIR HANDING, PRIMARY AIR, ECS-AHU' },
-    { title: '// 馬達控制盤/櫃 (MCP / MCC)', kw: 'MOTOR CONTROL PANEL, ECS-MCP, MCC-MCP' },
-    { title: '// 化學加藥 & 穩壓單元 (CDU / PU)', kw: 'CHEM. DOSING, CDU, PRESSURIZATION, PU' },
+    {
+      title: '// 工作描述標準化規則 (Fire Damper)',
+      kw: 'MR TPB ECS-Electro-thermal linked fire damper ➔ thermal linked fire damper\nMR TPB ECS-Fusible linked fire damper ➔ Fusible linked fire damper',
+    },
+    {
+      title: '// 工作描述標準化規則 (Air-Cooled Chiller)',
+      kw: 'ACC ➔ AIR-COOLED CHILLER\n（依據港鐵工程維護規範自動替換縮寫，防範人工筆誤）',
+    },
+    {
+      title: '// 冷凍水泵 & 風櫃 (CWP / AHU)',
+      kw: '匹配關鍵字：CWP, CHP, MUP, MWP, MR-SHD-CP, AIR HANDLING, ECS-AHU',
+    },
+    {
+      title: '// 控制櫃 & 化學加藥 (MCP / CDU / PU)',
+      kw: '匹配關鍵字：MOTOR CONTROL PANEL, MCC-MCP, CHEM. DOSING, CDU, PU',
+    },
   ];
 
   rules.forEach((rl, idx) => {
@@ -338,32 +350,78 @@ export function exportPresentationPptx(): void {
 
     slide5.addText(rl.title, {
       x: x + 0.3, y: y + 0.2, w: 4.8, h: 0.4,
-      fontSize: 14, fontFace: 'Consolas', bold: true, color: 'FBBF24',
+      fontSize: 13, fontFace: 'Consolas', bold: true, color: 'FBBF24',
     });
 
-    slide5.addText(`匹配關鍵字：\n${rl.kw}`, {
+    slide5.addText(rl.kw, {
       x: x + 0.3, y: y + 0.7, w: 4.8, h: 1.0,
-      fontSize: 12, fontFace: 'Consolas', color: '6EE7B7', lineSpacing: 18,
+      fontSize: 11, fontFace: 'Consolas', color: '6EE7B7', lineSpacing: 18,
     });
   });
 
-  slide5.addText('✨ 支援同一設備項目自動填入多筆 WO_WONUM （以獨立換行呈現，100% 容錯相容）', {
+  slide5.addText('✨ 支援同一設備項目自動填入多筆 PM W/O（獨立換行呈現，100% 容錯與自動正規化）', {
     x: 0.8, y: 6.3, w: 11.6, h: 0.4,
     fontSize: 12, fontFace: 'Microsoft JhengHei', bold: true, color: '38BDF8',
   });
 
 
   // -------------------------------------------------------------
-  // SLIDE 6: BENEFITS
+  // SLIDE 6: DIGITAL SIGNATURE & MULTI-STATION EXPORT
   // -------------------------------------------------------------
   const slide6 = pptx.addSlide();
   slide6.background = { color: COLOR_BG };
 
-  slide6.addText('五、效益與管理價值', {
+  slide6.addText('五、電子簽名與全站點一站一頁輸出', {
     x: 0.8, y: 0.6, w: 11.0, h: 0.5,
     fontSize: 22, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_DARK,
   });
-  slide6.addText('Quantifiable Benefits & Management Value', {
+  slide6.addText('Digital Signature & Multi-Station PDF Sheet Export', {
+    x: 0.8, y: 1.1, w: 11.0, h: 0.3,
+    fontSize: 12, color: COLOR_SLATE,
+  });
+
+  // Left card: Signature
+  slide6.addShape(SHAPES.RECTANGLE, {
+    x: 0.8, y: 1.8, w: 5.6, h: 4.5,
+    fill: { color: COLOR_WHITE },
+    line: { color: 'C7D2FE', width: 1 },
+  });
+  slide6.addText('Prepared / Verified / Endorsed 電子簽名', {
+    x: 1.1, y: 2.1, w: 5.0, h: 0.4,
+    fontSize: 16, fontFace: 'Microsoft JhengHei', bold: true, color: '4F46E5',
+  });
+  slide6.addText(
+    '• 觸控手寫簽署：內建平滑 Canvas 手寫板，可調粗細與筆觸色彩 (藍/黑/紅)。\n\n• 圖檔印章上傳：支援透明背景之 PNG/JPG 簽名檔或工程職章。\n\n• 一鍵全線同步：可勾選「同步套用至全線 20 個站點」，一次簽署全面生效。\n\n• 未簽署自動空白：無縫兼顧列印紙本手簽或純電子歸檔流程。',
+    { x: 1.1, y: 2.7, w: 5.0, h: 3.3, fontSize: 13, fontFace: 'Microsoft JhengHei', color: COLOR_DARK, lineSpacing: 20 }
+  );
+
+  // Right card: Multi-station export
+  slide6.addShape(SHAPES.RECTANGLE, {
+    x: 6.8, y: 1.8, w: 5.6, h: 4.5,
+    fill: { color: COLOR_WHITE },
+    line: { color: 'E9D5FF', width: 1 },
+  });
+  slide6.addText('一鍵匯出全站點 PDF (一站一頁 PDF Sheet)', {
+    x: 7.1, y: 2.1, w: 5.0, h: 0.4,
+    fontSize: 16, fontFace: 'Microsoft JhengHei', bold: true, color: '9333EA',
+  });
+  slide6.addText(
+    '• 嚴格一站一頁：無論匯出 5 站或 20 站，每一車站獨立佔用完整 A4 橫向一頁，絕不跨頁錯位。\n\n• 背景多頁編譯引擎：隱藏畫布高解析度渲染各站報表，自動合併為單一多頁 PDF。\n\n• 極速批量處理：省去逐站手動導出的繁複勞動，全線 20 站點 30 秒內全數輸出完成。\n\n• 自動標準檔名：MTR_PM_Reports_All_Stations_2026.pdf',
+    { x: 7.1, y: 2.7, w: 5.0, h: 3.3, fontSize: 13, fontFace: 'Microsoft JhengHei', color: COLOR_DARK, lineSpacing: 20 }
+  );
+
+
+  // -------------------------------------------------------------
+  // SLIDE 7: BENEFITS
+  // -------------------------------------------------------------
+  const slide7 = pptx.addSlide();
+  slide7.background = { color: COLOR_BG };
+
+  slide7.addText('六、效益與管理價值', {
+    x: 0.8, y: 0.6, w: 11.0, h: 0.5,
+    fontSize: 22, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_DARK,
+  });
+  slide7.addText('Quantifiable Benefits & Management Value', {
     x: 0.8, y: 1.1, w: 11.0, h: 0.3,
     fontSize: 12, color: COLOR_SLATE,
   });
@@ -372,7 +430,7 @@ export function exportPresentationPptx(): void {
     { t: '時間成本降低 95%', d: '從原本每份報告手動整理 120 分鐘縮短至 1 分鐘內完成。', c: COLOR_EMERALD },
     { t: '人工錯填率歸零', d: '程式精準邏輯比對，防止遺漏工單編號或放錯設備類別。', c: '0284C7' },
     { t: '標準化格式統一管理', d: '確保 SHD、TWD 等所有車廠產出的 PDF 報告樣式一致，便於審核。', c: '9333EA' },
-    { t: '完整雲端與歷史紀錄', d: '支援月保養紀錄自動歸檔與歷史版本隨時調閱下載。', c: COLOR_AMBER },
+    { t: '全線數位簽署與一鍵導出', d: '支援 20 站點一站一頁 PDF 批次導出及電子職章同步簽署。', c: COLOR_AMBER },
   ];
 
   bfits.forEach((bf, idx) => {
@@ -381,18 +439,18 @@ export function exportPresentationPptx(): void {
     const x = 0.8 + col * 5.8;
     const y = 1.8 + row * 2.3;
 
-    slide6.addShape(SHAPES.RECTANGLE, {
+    slide7.addShape(SHAPES.RECTANGLE, {
       x, y, w: 5.4, h: 2.0,
       fill: { color: COLOR_WHITE },
       line: { color: 'E2E8F0', width: 1 },
     });
 
-    slide6.addText(bf.t, {
+    slide7.addText(bf.t, {
       x: x + 0.3, y: y + 0.3, w: 4.8, h: 0.4,
       fontSize: 16, fontFace: 'Microsoft JhengHei', bold: true, color: bf.c,
     });
 
-    slide6.addText(bf.d, {
+    slide7.addText(bf.d, {
       x: x + 0.3, y: y + 0.8, w: 4.8, h: 1.0,
       fontSize: 13, fontFace: 'Microsoft JhengHei', color: COLOR_SLATE, lineSpacing: 18,
     });
@@ -400,29 +458,29 @@ export function exportPresentationPptx(): void {
 
 
   // -------------------------------------------------------------
-  // SLIDE 7: CONCLUSION
+  // SLIDE 8: CONCLUSION
   // -------------------------------------------------------------
-  const slide7 = pptx.addSlide();
-  slide7.background = { color: COLOR_BG };
+  const slide8 = pptx.addSlide();
+  slide8.background = { color: COLOR_BG };
 
-  slide7.addShape(SHAPES.RECTANGLE, {
+  slide8.addShape(SHAPES.RECTANGLE, {
     x: 1.5, y: 1.2, w: 10.3, h: 4.8,
     fill: { color: COLOR_WHITE },
     line: { color: 'E2E8F0', width: 1 },
   });
 
-  slide7.addText('六、結語與 Q&A', {
+  slide8.addText('七、結語與 Q&A', {
     x: 2.0, y: 1.8, w: 9.3, h: 0.4,
     fontSize: 14, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_RED, align: 'center',
   });
 
-  slide7.addText('推進港鐵工程保養數位化升級', {
+  slide8.addText('推進港鐵工程保養數位化升級', {
     x: 2.0, y: 2.4, w: 9.3, h: 0.8,
     fontSize: 28, fontFace: 'Microsoft JhengHei', bold: true, color: COLOR_DARK, align: 'center',
   });
 
-  slide7.addText(
-    '本自動化系統旨在提昇工程保養團隊工作效率與資料精準度，\n歡迎同仁於日常保養作業中積極使用與提出優化建議！\n\nThank You!',
+  slide8.addText(
+    '本自動化系統旨在提昇工程保養團隊工作效率與資料精準度，\n支援工作表自選、工作描述自動規範、電子手簽/印章與一站一頁 PDF 匯出。\n歡迎同仁於日常保養作業中積極使用與提出優化建議！\n\nThank You!',
     {
       x: 2.0, y: 3.4, w: 9.3, h: 2.0,
       fontSize: 15, fontFace: 'Microsoft JhengHei', color: COLOR_SLATE, align: 'center', lineSpacing: 22,

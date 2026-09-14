@@ -22,6 +22,7 @@ import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { ArchiveHistoryModal } from './components/ArchiveHistoryModal';
 import { HelpGuideModal } from './components/HelpGuideModal';
 import { PPTModal } from './components/PPTModal';
+import { SignatureModal, SignatoryRole } from './components/SignatureModal';
 import { exportToPdf, exportAllStationsToPdf, printDocument } from './utils/pdfExport';
 import {
   Check,
@@ -181,6 +182,102 @@ export default function App() {
   const [isArchiveHistoryOpen, setIsArchiveHistoryOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isPptOpen, setIsPptOpen] = useState(false);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [activeSignatureRole, setActiveSignatureRole] = useState<SignatoryRole>('preparedBy');
+
+  const handleOpenSignatureModal = (role: SignatoryRole) => {
+    setActiveSignatureRole(role);
+    setIsSignatureModalOpen(true);
+  };
+
+  const handleSaveSignature = (
+    role: SignatoryRole,
+    signatureDataUrl: string,
+    applyToAllStations: boolean
+  ) => {
+    const sigKey =
+      role === 'preparedBy'
+        ? 'preparedBySig'
+        : role === 'verifiedBy'
+        ? 'verifiedBySig'
+        : 'endorsedBySig';
+
+    setReportsByDepot((prev) => {
+      const next = { ...prev };
+      if (applyToAllStations) {
+        ALL_MTR_LOCATIONS.forEach((loc) => {
+          const code = loc.code;
+          const curr = next[code] || createEmptyReport(code);
+          next[code] = {
+            ...curr,
+            signatories: {
+              ...curr.signatories,
+              [sigKey]: signatureDataUrl,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+        });
+      } else {
+        const curr = next[currentDepot] || createEmptyReport(currentDepot);
+        next[currentDepot] = {
+          ...curr,
+          signatories: {
+            ...curr.signatories,
+            [sigKey]: signatureDataUrl,
+          },
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return next;
+    });
+
+    const roleName =
+      role === 'preparedBy'
+        ? 'Prepared By'
+        : role === 'verifiedBy'
+        ? 'Verified By'
+        : 'Endorsed By';
+    showToast(
+      `已儲存 ${roleName} 簽名 (${applyToAllStations ? '已套用至全部車站' : currentDepot})！`
+    );
+  };
+
+  const handleRemoveSignature = (role: SignatoryRole, applyToAllStations: boolean) => {
+    const sigKey =
+      role === 'preparedBy'
+        ? 'preparedBySig'
+        : role === 'verifiedBy'
+        ? 'verifiedBySig'
+        : 'endorsedBySig';
+
+    setReportsByDepot((prev) => {
+      const next = { ...prev };
+      if (applyToAllStations) {
+        Object.keys(next).forEach((code) => {
+          if (next[code]?.signatories) {
+            next[code] = {
+              ...next[code],
+              signatories: {
+                ...next[code].signatories,
+                [sigKey]: '',
+              },
+            };
+          }
+        });
+      } else if (next[currentDepot]?.signatories) {
+        next[currentDepot] = {
+          ...next[currentDepot],
+          signatories: {
+            ...next[currentDepot].signatories,
+            [sigKey]: '',
+          },
+        };
+      }
+      return next;
+    });
+
+    showToast(`已清除簽名！`);
+  };
 
   const handleOpenUploadModal = () => {
     setUploadModalTab('upload');
@@ -541,10 +638,7 @@ export default function App() {
       {/* Top Header Navbar: Simplified to Upload Excel, Export PDF, and clean More dropdown */}
       <HeaderNavbar
         onUploadExcelClick={() => setIsExcelUploadOpen(true)}
-        onResetDefaultPdfClick={handleResetDefaultPdf}
-        onClearAllDataClick={handleClearAllData}
         onClearTmdTwdPhdClick={handleClearTmdTwdPhd}
-        onLoadSampleClick={handleLoadSampleLak}
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
@@ -646,15 +740,15 @@ export default function App() {
               </button>
             )}
 
-            {/* Clear Current Station Button */}
+            {/* Unified Clear Data Button (用戶要求: 清空本站和清空全部功能一樣, 只要其中一個按鈕就夠) */}
             <button
               type="button"
               onClick={handleResetDefaultPdf}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="清空目前選取站點的所有資料 (Clear Current Station)"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="清空目前選取站點的表格工單資料 (Clear Data)"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-              <span>清空本站 (Clear Station)</span>
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>清空資料 (Clear Data)</span>
             </button>
 
             {/* Clear TMD/TWD/PHD Preset Button (User Directive: 不要清空 TMD/TWD/PHD 預設按鈕) */}
@@ -666,17 +760,6 @@ export default function App() {
             >
               <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
               <span>清空 TMD/TWD/PHD 預設</span>
-            </button>
-
-            {/* Clear All Data Button */}
-            <button
-              type="button"
-              onClick={handleClearAllData}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="清空所有 20 個車站及車廠的資料，還原為初始狀態 (Clear All Data)"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              <span>清空全部 (Clear All)</span>
             </button>
 
             {/* Fine-Tune Toggle */}
@@ -703,6 +786,7 @@ export default function App() {
             fineTuneSettings={fineTuneSettings}
             onUpdateReportData={setReportData}
             isEditingEnabled={true}
+            onOpenSignatureModal={handleOpenSignatureModal}
           />
         </div>
       </main>
@@ -742,6 +826,21 @@ export default function App() {
       <PPTModal
         isOpen={isPptOpen}
         onClose={() => setIsPptOpen(false)}
+      />
+
+      <SignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        role={activeSignatureRole}
+        currentSignature={
+          activeSignatureRole === 'preparedBy'
+            ? reportData.signatories.preparedBySig
+            : activeSignatureRole === 'verifiedBy'
+            ? reportData.signatories.verifiedBySig
+            : reportData.signatories.endorsedBySig
+        }
+        onSaveSignature={handleSaveSignature}
+        onRemoveSignature={handleRemoveSignature}
       />
 
       {/* Offscreen Multi-Station PDF Render Container for High-Quality Multi-Page PDF Export (One station name one PDF sheet) */}

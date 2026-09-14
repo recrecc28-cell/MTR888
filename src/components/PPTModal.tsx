@@ -18,6 +18,8 @@ import {
   Check,
   Presentation,
   Download,
+  PenTool,
+  Layers,
 } from 'lucide-react';
 import { exportPresentationPptx } from '../utils/pptxExport';
 
@@ -152,51 +154,51 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
       category: '功能亮點 Core Features',
       type: 'standard',
       content: (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 h-full items-center">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-start gap-4">
-            <div className="p-3 bg-emerald-100 text-emerald-700 rounded-lg shrink-0">
-              <FileSpreadsheet className="w-6 h-6" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full items-center">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-start gap-3.5">
+            <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-lg shrink-0">
+              <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-base font-bold text-slate-900 mb-1">1. 智慧 Excel 保養清單解析</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">1. Excel 全工作表解析與分頁自選</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                支援上傳包含 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">WO_WONUM</code>、<code className="text-emerald-700 bg-emerald-50 px-1 rounded">ASSET.ASSETNUM</code> 與 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">ASSET.DESCRIPTION</code> 的保養工作 Excel，自動解析無須重組欄位。
+                支援上傳含多工作表的 Excel，可自選單一工作表或「全部工作表 (All Sheets)」，系統自動識別 20 個車站/車廠並同步分流填入。
               </p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-start gap-4">
-            <div className="p-3 bg-sky-100 text-sky-700 rounded-lg shrink-0">
-              <Zap className="w-6 h-6" />
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-start gap-3.5">
+            <div className="p-2.5 bg-sky-100 text-sky-700 rounded-lg shrink-0">
+              <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-base font-bold text-slate-900 mb-1">2. 多工單智慧自動匹配</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">2. 工作描述自動標準化規範</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                內建設備匹配規則引擎，當單一設備對應多筆工單（如 5001618422 ~ 5001618426）時，自動依換行格式完整填入 PM W/O。
+                內建規範字典：自動將 <code className="text-sky-700 bg-sky-50 px-1 rounded">MR TPB ECS-Electro-thermal linked fire damper</code> 轉為 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">thermal linked fire damper</code>、<code className="text-sky-700 bg-sky-50 px-1 rounded">Fusible linked fire damper</code> 以及 <code className="text-sky-700 bg-sky-50 px-1 rounded">ACC</code> 轉為 <code className="text-emerald-700 bg-emerald-50 px-1 rounded">AIR-COOLED CHILLER</code>。
               </p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-start gap-4">
-            <div className="p-3 bg-amber-100 text-amber-700 rounded-lg shrink-0">
-              <Layout className="w-6 h-6" />
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-start gap-3.5">
+            <div className="p-2.5 bg-amber-100 text-amber-700 rounded-lg shrink-0">
+              <PenTool className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-base font-bold text-slate-900 mb-1">3. 預覽畫面雙向即時微調</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">3. 線上電子手簽與印章上傳</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                可直接在 PDF 預覽畫面上點擊修改文字、調整工單號、變更數量與責任人，兼具微調彈性與直覺操作。
+                Prepared By、Verified By、Endorsed By 支援觸控手寫板簽署與透明圖檔上傳，並具備「一鍵套用至全線 20 個站點」功能，大幅節省簽核時間。
               </p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex items-start gap-4">
-            <div className="p-3 bg-purple-100 text-purple-700 rounded-lg shrink-0">
-              <FileDown className="w-6 h-6" />
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-start gap-3.5">
+            <div className="p-2.5 bg-purple-100 text-purple-700 rounded-lg shrink-0">
+              <Layers className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-base font-bold text-slate-900 mb-1">4. 高清 A4 PDF 導出與歸檔</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">4. 全車站一鍵匯出 (一站一頁 PDF Sheet)</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                符合 A4 橫向標準尺寸，支援直接列印或導出為高品質 PDF，並自動寫入 LocalStorage 與歷史存檔紀錄。
+                支援一鍵匯出所有具備資料之站點 PDF，嚴格保證「一站名一頁 A4 橫向」，版面整齊劃一，直接滿足呈核與歸檔需求。
               </p>
             </div>
           </div>
@@ -219,9 +221,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-red-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   1
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">選擇車廠與月份</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">選擇車廠或站點</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  點擊切換 SHD、TWD、KBD 或 LOW 等車廠分頁。
+                  點擊切換 20 個車站/車廠（如 LAK、SHD、TWD 等）或直接導入自動切換。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-red-600 font-medium">
@@ -234,9 +236,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   2
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">上傳保養 Excel</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">上傳 Excel & 選表</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  拖曳或點擊選擇由系統導出的月保養清單檔案。
+                  拖曳上傳 Excel，可自選個別工作表或「全部工作表 (All Sheets)」批次導入。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-emerald-600 font-medium">
@@ -249,9 +251,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   3
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">確認匹配與微調</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">確認比對與線上簽署</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  檢查自動對應之 WO_WONUM 填入數量，必要時直接編輯。
+                  自動標準化描述，檢視 PM W/O，並點擊下方簽名格進行手寫簽名或圖檔印章。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-sky-600 font-medium">
@@ -264,9 +266,9 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span className="w-8 h-8 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-sm mb-3">
                   4
                 </span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">匯出 PDF / 歸檔</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">一鍵匯出 (一站一頁)</h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  點擊「匯出 PDF 檔」或「自動歸檔」保留歷史紀錄。
+                  點擊「匯出全部 (一站一頁)」或個別導出，完整符合 A4 橫向呈核規範。
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-slate-200 text-[11px] text-purple-600 font-medium">
@@ -278,10 +280,10 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
             <div className="flex items-center gap-2 font-semibold">
               <Sparkles className="w-4 h-4 text-emerald-600" />
-              <span>自動填入狀態追蹤：每個車廠分頁均顯示「WO_WONUM 已填」即時數字統計</span>
+              <span>自動填入狀態追蹤：頂部及各站即時顯示填入筆數，一鍵清空 TMD/TWD/PHD 預設內容</span>
             </div>
             <span className="bg-white px-2 py-0.5 rounded border border-emerald-300 font-bold">
-              即時校驗
+              極簡操作
             </span>
           </div>
         </div>
@@ -291,62 +293,135 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
     // Slide 5: Matching Rules & Tech
     {
       id: 5,
-      title: '四、智慧設備匹配規則引擎',
-      subtitle: 'Smart Equipment Matching Engine',
-      category: '核心演算法 Algorithm',
+      title: '四、規則引擎與工作描述標準化規範',
+      subtitle: 'Smart Matching & Work Description Normalization',
+      category: '規則引擎 Algorithm',
       type: 'standard',
       content: (
-        <div className="bg-slate-900 text-slate-100 rounded-xl p-6 h-full flex flex-col justify-between font-mono text-xs">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div className="bg-slate-900 text-slate-100 rounded-xl p-5 h-full flex flex-col justify-between font-mono text-xs">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
             <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
               <Sparkles className="w-4 h-4" />
-              <span>Equipment Classifier & Rule Engine</span>
+              <span>Equipment Normalization & Regex Rules</span>
             </div>
             <span className="text-slate-400 text-[11px]">excelHelper.ts</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs overflow-y-auto">
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-amber-400 font-bold block mb-1">// 冷凍水泵 (Chilled Water Pump)</span>
+              <span className="text-amber-400 font-bold block mb-1">
+                // 工作描述標準化規則 1 & 2 (Fire Damper)
+              </span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                匹配關鍵字：<code className="text-emerald-300">CWP</code>, <code className="text-emerald-300">CHP</code>, <code className="text-emerald-300">MUP</code>, <code className="text-emerald-300">MWP</code>, <code className="text-emerald-300">MR-SHD-CP</code>, <code className="text-emerald-300">SHD-ECS-CHP</code>
+                • <code className="text-rose-300">MR TPB ECS-Electro-thermal linked fire damper</code><br />
+                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">thermal linked fire damper</code><br />
+                • <code className="text-rose-300">MR TPB ECS-Fusible linked fire damper</code><br />
+                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">Fusible linked fire damper</code>
               </p>
             </div>
 
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-amber-400 font-bold block mb-1">// 風櫃機組 (AHU / PAHU)</span>
+              <span className="text-amber-400 font-bold block mb-1">
+                // 工作描述標準化規則 3 (Chiller)
+              </span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                匹配關鍵字：<code className="text-emerald-300">AIR HANDLING</code>, <code className="text-emerald-300">AIR HANDING</code>, <code className="text-emerald-300">PRIMARY AIR</code>, <code className="text-emerald-300">ECS-AHU</code>
+                • <code className="text-rose-300">ACC</code><br />
+                &nbsp;&nbsp;➔ <code className="text-emerald-300 font-bold">AIR-COOLED CHILLER</code><br />
+                （嚴格依據港鐵工程維護規範自動替換縮寫）
               </p>
             </div>
 
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-amber-400 font-bold block mb-1">// 馬達控制盤/櫃 (MCP / MCC)</span>
+              <span className="text-sky-400 font-bold block mb-1">// 冷凍水泵 & 風櫃機組 (CWP / AHU)</span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                匹配關鍵字：<code className="text-emerald-300">MOTOR CONTROL PANEL</code>, <code className="text-emerald-300">ECS-MCP</code>, <code className="text-emerald-300">MCC-MCP</code>
+                匹配關鍵字：<code className="text-emerald-300">CWP, CHP, MUP, MWP, MR-SHD-CP, AIR HANDLING, ECS-AHU</code>
               </p>
             </div>
 
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-amber-400 font-bold block mb-1">// 化學加藥 & 穩壓單元 (CDU / PU)</span>
+              <span className="text-sky-400 font-bold block mb-1">// 控制櫃 & 化學加藥 (MCP / CDU / PU)</span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                匹配關鍵字：<code className="text-emerald-300">CHEM. DOSING</code>, <code className="text-emerald-300">CDU</code>, <code className="text-emerald-300">PRESSURIZATION</code>, <code className="text-emerald-300">PU</code>
+                匹配關鍵字：<code className="text-emerald-300">MOTOR CONTROL PANEL, MCC-MCP, CHEM. DOSING, CDU, PU</code>
               </p>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-            <span>支援同一設備項目填入多筆 WO_WONUM （使用獨立換行呈現）</span>
-            <span className="text-emerald-400 font-semibold">100% 容錯相容性</span>
+          <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+            <span>支援同一設備項目自動填入多筆 PM W/O（獨立換行呈現）</span>
+            <span className="text-emerald-400 font-semibold">100% 容錯與自動規範</span>
           </div>
         </div>
       ),
     },
 
-    // Slide 6: Expected Impact & Value
+    // Slide 6: Digital Signature & Batch Export
     {
       id: 6,
-      title: '五、效益與管理價值',
+      title: '五、電子簽名與全站點一站一頁輸出',
+      subtitle: 'Digital Signature & Multi-Station PDF Sheet Export',
+      category: '數位簽核 Digital Signature',
+      type: 'standard',
+      content: (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 h-full items-center">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-base mb-3">
+                <PenTool className="w-5 h-5" />
+                <span>Prepared / Verified / Endorsed 電子簽名</span>
+              </div>
+              <ul className="text-xs text-slate-600 space-y-2.5 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>觸控手寫簽署：</strong>內建平滑 Canvas 手寫板，可自由切換粗細 (細/中/粗) 及筆觸顏色 (深藍/黑/紅)。</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>圖檔印章上傳：</strong>支援 PNG/JPG 格式之簽名檔或工程職章透明圖檔上傳。</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <span><strong>一鍵同步全線：</strong>勾選「同步套用至全線 20 個車站/車廠」，只需簽署一次即可套用全線。</span>
+                </li>
+              </ul>
+            </div>
+            <div className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 mt-3">
+              ✨ 簽名直接精準嵌入報告對應格中，未簽署時保持空白，兼顧列印手簽與電子流程。
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center gap-2 text-purple-600 font-bold text-base mb-3">
+                <Layers className="w-5 h-5" />
+                <span>一鍵匯出全站點 PDF (一站一頁 PDF Sheet)</span>
+              </div>
+              <ul className="text-xs text-slate-600 space-y-2.5 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>嚴格一站一頁：</strong>無論匯出 5 站或 20 站，每一車站獨立佔用完整 A4 橫向一頁，絕對不跨頁重疊。</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>背景多頁編譯引擎：</strong>透過隱藏畫布同步渲染各站報表，一鍵生成多頁高品質合輯 PDF。</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                  <span><strong>極速批量處理：</strong>免去逐個車站手動切換導出的重複性勞動，20 個站點 30 秒內全數輸出完成。</span>
+                </li>
+              </ul>
+            </div>
+            <div className="text-[11px] text-purple-700 bg-purple-50 border border-purple-200 rounded-lg p-2.5 mt-3">
+              📑 檔名自動格式化：<code>MTR_PM_Reports_All_Stations_2026.pdf</code>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+
+    // Slide 7: Expected Impact & Value
+    {
+      id: 7,
+      title: '六、效益與管理價值',
       subtitle: 'Quantifiable Benefits & ROI',
       category: '實質效益 Benefits',
       type: 'standard',
@@ -399,10 +474,10 @@ export const PPTModal: React.FC<Props> = ({ isOpen, onClose }) => {
       ),
     },
 
-    // Slide 7: Conclusion
+    // Slide 8: Conclusion
     {
-      id: 7,
-      title: '六、結語與 Q&A',
+      id: 8,
+      title: '七、結語與 Q&A',
       subtitle: 'Conclusion & Next Steps',
       category: '結語 Summary',
       type: 'conclusion',

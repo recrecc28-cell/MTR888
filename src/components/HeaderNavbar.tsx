@@ -18,10 +18,7 @@ import {
 
 interface Props {
   onUploadExcelClick: () => void;
-  onResetDefaultPdfClick: () => void;
-  onClearAllDataClick: () => void;
   onClearTmdTwdPhdClick?: () => void;
-  onLoadSampleClick?: () => void;
   onSaveToArchiveClick: () => void;
   onOpenArchiveHistoryClick: () => void;
   onExportPdfClick: () => void;
@@ -36,10 +33,7 @@ interface Props {
 
 export const HeaderNavbar: React.FC<Props> = ({
   onUploadExcelClick,
-  onResetDefaultPdfClick,
-  onClearAllDataClick,
   onClearTmdTwdPhdClick,
-  onLoadSampleClick,
   onSaveToArchiveClick,
   onOpenArchiveHistoryClick,
   onExportPdfClick,
@@ -222,44 +216,6 @@ export const HeaderNavbar: React.FC<Props> = ({
                     <span>清空 TMD/TWD/PHD 預設內容</span>
                   </button>
                 )}
-
-                {onLoadSampleClick && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMoreOpen(false);
-                      onLoadSampleClick();
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-sky-50 text-sky-700 flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-sky-600" />
-                    <span>載入示範範本 (Load Sample)</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMoreOpen(false);
-                    onResetDefaultPdfClick();
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-amber-50 text-amber-700 flex items-center gap-2 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                  <span>清空本站表格 (Clear Station)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMoreOpen(false);
-                    onClearAllDataClick();
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-700 flex items-center gap-2 transition-colors cursor-pointer font-medium"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                  <span>清空全部資料 (Clear All)</span>
-                </button>
 
                 {onOpenPptClick && (
                   <button

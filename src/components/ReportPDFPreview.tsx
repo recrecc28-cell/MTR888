@@ -1,12 +1,13 @@
 import React from 'react';
 import { MaintenanceReportData, FineTuneSettings, MaintenanceItem, SubWoEntry } from '../types';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, PenTool } from 'lucide-react';
 
 interface Props {
   reportData: MaintenanceReportData;
   fineTuneSettings: FineTuneSettings;
   onUpdateReportData?: (newData: MaintenanceReportData) => void;
   isEditingEnabled?: boolean;
+  onOpenSignatureModal?: (role: 'preparedBy' | 'verifiedBy' | 'endorsedBy') => void;
 }
 
 export const ReportPDFPreview: React.FC<Props> = ({
@@ -14,6 +15,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
   fineTuneSettings,
   onUpdateReportData = (_newData: MaintenanceReportData) => {},
   isEditingEnabled = true,
+  onOpenSignatureModal,
 }) => {
   const { items, signatories } = reportData;
 
@@ -802,16 +804,118 @@ export const ReportPDFPreview: React.FC<Props> = ({
         <div style={signatoryStyle} className="mt-8 relative z-10">
           <table className="w-full border-collapse text-left" style={{ borderCollapse: 'collapse', borderColor: fineTuneSettings.tableBorderColor }}>
             <tbody>
-              {/* Row 1: Role Title */}
+              {/* Row 1: Role Title & Signature */}
               <tr>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
-                  <span>Prepared By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                  <div className="flex items-center justify-between">
+                    <span>Prepared By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                    {isEditingEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenSignatureModal?.('preparedBy')}
+                        className="no-print text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
+                        title="手簽或上傳簽名樣式"
+                      >
+                        <PenTool className="w-2.5 h-2.5" />
+                        <span>{signatories.preparedBySig ? '更換簽名' : '簽名/印章'}</span>
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('preparedBy')}
+                    className={`h-12 my-1 flex items-center justify-center transition-all ${
+                      isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
+                    }`}
+                  >
+                    {signatories.preparedBySig ? (
+                      <img
+                        src={signatories.preparedBySig}
+                        alt="Prepared By Signature"
+                        className="max-h-11 max-w-full object-contain"
+                      />
+                    ) : (
+                      isEditingEnabled && (
+                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2.5 py-1.5 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
+                          <PenTool className="w-3 h-3 text-slate-400" />
+                          <span>點擊手簽或上傳簽名樣式</span>
+                        </div>
+                      )
+                    )}
+                  </div>
                 </td>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
-                  <span>Verified By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                  <div className="flex items-center justify-between">
+                    <span>Verified By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                    {isEditingEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenSignatureModal?.('verifiedBy')}
+                        className="no-print text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
+                        title="手簽或上傳簽名樣式"
+                      >
+                        <PenTool className="w-2.5 h-2.5" />
+                        <span>{signatories.verifiedBySig ? '更換簽名' : '簽名/印章'}</span>
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('verifiedBy')}
+                    className={`h-12 my-1 flex items-center justify-center transition-all ${
+                      isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
+                    }`}
+                  >
+                    {signatories.verifiedBySig ? (
+                      <img
+                        src={signatories.verifiedBySig}
+                        alt="Verified By Signature"
+                        className="max-h-11 max-w-full object-contain"
+                      />
+                    ) : (
+                      isEditingEnabled && (
+                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2.5 py-1.5 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
+                          <PenTool className="w-3 h-3 text-slate-400" />
+                          <span>點擊手簽或上傳簽名樣式</span>
+                        </div>
+                      )
+                    )}
+                  </div>
                 </td>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
-                  <span>Endorsed By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                  <div className="flex items-center justify-between">
+                    <span>Endorsed By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                    {isEditingEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenSignatureModal?.('endorsedBy')}
+                        className="no-print text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
+                        title="手簽或上傳簽名樣式"
+                      >
+                        <PenTool className="w-2.5 h-2.5" />
+                        <span>{signatories.endorsedBySig ? '更換簽名' : '簽名/印章'}</span>
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('endorsedBy')}
+                    className={`h-12 my-1 flex items-center justify-center transition-all ${
+                      isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
+                    }`}
+                  >
+                    {signatories.endorsedBySig ? (
+                      <img
+                        src={signatories.endorsedBySig}
+                        alt="Endorsed By Signature"
+                        className="max-h-11 max-w-full object-contain"
+                      />
+                    ) : (
+                      isEditingEnabled && (
+                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2.5 py-1.5 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
+                          <PenTool className="w-3 h-3 text-slate-400" />
+                          <span>點擊手簽或上傳簽名樣式</span>
+                        </div>
+                      )
+                    )}
+                  </div>
                 </td>
               </tr>
 
