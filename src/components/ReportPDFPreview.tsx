@@ -5,14 +5,14 @@ import { Plus, Trash2 } from 'lucide-react';
 interface Props {
   reportData: MaintenanceReportData;
   fineTuneSettings: FineTuneSettings;
-  onUpdateReportData: (newData: MaintenanceReportData) => void;
+  onUpdateReportData?: (newData: MaintenanceReportData) => void;
   isEditingEnabled?: boolean;
 }
 
 export const ReportPDFPreview: React.FC<Props> = ({
   reportData,
   fineTuneSettings,
-  onUpdateReportData,
+  onUpdateReportData = (_newData: MaintenanceReportData) => {},
   isEditingEnabled = true,
 }) => {
   const { items, signatories } = reportData;

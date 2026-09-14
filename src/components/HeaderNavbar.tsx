@@ -13,16 +13,20 @@ import {
   Train,
   ChevronDown,
   Trash2,
+  Layers,
 } from 'lucide-react';
 
 interface Props {
   onUploadExcelClick: () => void;
   onResetDefaultPdfClick: () => void;
   onClearAllDataClick: () => void;
+  onClearTmdTwdPhdClick?: () => void;
   onLoadSampleClick?: () => void;
   onSaveToArchiveClick: () => void;
   onOpenArchiveHistoryClick: () => void;
   onExportPdfClick: () => void;
+  onExportAllStationsPdfClick?: () => void;
+  stationsWithDataCount?: number;
   onPrintClick: () => void;
   onOpenHelpClick: () => void;
   onOpenPptClick?: () => void;
@@ -34,10 +38,13 @@ export const HeaderNavbar: React.FC<Props> = ({
   onUploadExcelClick,
   onResetDefaultPdfClick,
   onClearAllDataClick,
+  onClearTmdTwdPhdClick,
   onLoadSampleClick,
   onSaveToArchiveClick,
   onOpenArchiveHistoryClick,
   onExportPdfClick,
+  onExportAllStationsPdfClick,
+  stationsWithDataCount = 0,
   onPrintClick,
   onOpenHelpClick,
   onOpenPptClick,
@@ -91,21 +98,34 @@ export const HeaderNavbar: React.FC<Props> = ({
             type="button"
             onClick={onUploadExcelClick}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
-            title="上傳港鐵保養清單 Excel 檔"
+            title="上傳港鐵保養清單 Excel 檔 (支援選擇工作表與輸出所有站點)"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>上傳 Excel</span>
           </button>
 
-          {/* Core Button 2: Export PDF */}
+          {/* Export All Stations Button (Prominently shown if multiple stations have data) */}
+          {onExportAllStationsPdfClick && stationsWithDataCount > 1 && (
+            <button
+              type="button"
+              onClick={onExportAllStationsPdfClick}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer animate-in fade-in"
+              title={`一鍵輸出全部 ${stationsWithDataCount} 個站點的 PDF (一站一頁)`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>匯出全部站點 ({stationsWithDataCount} 站 ‧ 一站一頁)</span>
+            </button>
+          )}
+
+          {/* Core Button 2: Export Single PDF */}
           <button
             type="button"
             onClick={onExportPdfClick}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
-            title="匯出 A4 PDF 報告"
+            title="匯出目前選取站點的 A4 PDF 報告"
           >
             <FileDown className="w-4 h-4" />
-            <span>匯出 PDF</span>
+            <span>匯出目前站點 PDF</span>
           </button>
 
           {/* More Options Dropdown (Cleanly collapses secondary buttons) */}
@@ -121,7 +141,28 @@ export const HeaderNavbar: React.FC<Props> = ({
             </button>
 
             {isMoreOpen && (
-              <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs text-slate-700 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute right-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs text-slate-700 animate-in fade-in slide-in-from-top-1">
+                {onExportAllStationsPdfClick && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreOpen(false);
+                      onExportAllStationsPdfClick();
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-700 flex items-center justify-between transition-colors cursor-pointer font-medium"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>匯出所有站點 PDF (一站一頁)</span>
+                    </div>
+                    {stationsWithDataCount > 0 && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 font-bold">
+                        {stationsWithDataCount} 站
+                      </span>
+                    )}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -166,6 +207,21 @@ export const HeaderNavbar: React.FC<Props> = ({
                 </button>
 
                 <div className="my-1 border-t border-slate-100" />
+
+                {onClearTmdTwdPhdClick && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreOpen(false);
+                      onClearTmdTwdPhdClick();
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-amber-50 text-amber-800 flex items-center gap-2 transition-colors cursor-pointer"
+                    title="清空 TMD/TWD/PHD 車廠的 PM W/O 及工單描述"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                    <span>清空 TMD/TWD/PHD 預設內容</span>
+                  </button>
+                )}
 
                 {onLoadSampleClick && (
                   <button

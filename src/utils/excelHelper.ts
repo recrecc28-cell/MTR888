@@ -666,6 +666,7 @@ export interface ParseExcelOptions {
   targetDepotCode?: string; // e.g. LAK, TWD, AIR
   filterByDepot?: boolean; // if true and targetDepotCode set, prefer targetDepotCode
   existingItems?: MaintenanceItem[]; // optional existing items to preserve QTYs
+  selectedSheetName?: string; // 'ALL' or specific sheet name
 }
 
 export const MONTH_NAMES = [
@@ -1572,13 +1573,41 @@ export function parsePastedText(
 }
 
 /**
+ * Reads worksheet names from an uploaded Excel workbook (.xlsx, .xls)
+ */
+export async function getExcelWorksheetNames(file: File): Promise<string[]> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Try ExcelJS first
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      if (workbook.worksheets && workbook.worksheets.length > 0) {
+        return workbook.worksheets.map((ws) => ws.name);
+      }
+    } catch {
+      // Fallback to SheetJS
+    }
+
+    const uint8 = new Uint8Array(arrayBuffer);
+    const wb = XLSX.read(uint8, { type: 'array', bookSheets: true });
+    return wb.SheetNames || [];
+  } catch (err) {
+    console.warn('Failed to extract worksheet names:', err);
+    return [];
+  }
+}
+
+/**
  * Fast & Safe Excel reader using ExcelJS
  * Unlike SheetJS, ExcelJS parses OpenXML via streaming/iterative parsing
  * and completely avoids "Maximum call stack size exceeded" errors on .xlsx files.
  */
 async function parseWithExcelJS(
   arrayBuffer: ArrayBuffer,
-  targetDepotCode?: string
+  targetDepotCode?: string,
+  selectedSheetName?: string
 ): Promise<{ jsonRows: any[][]; sheetName: string; allSheetsData: Record<string, any[][]> }> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(arrayBuffer);
@@ -1589,6 +1618,7 @@ async function parseWithExcelJS(
 
   const allSheetsData: Record<string, any[][]> = {};
   const cleanTarget = (targetDepotCode || '').toUpperCase().trim();
+  const cleanSelectedSheet = (selectedSheetName || '').trim();
   let matchedSheet = workbook.worksheets[0];
 
   for (const ws of workbook.worksheets) {
@@ -1620,14 +1650,21 @@ async function parseWithExcelJS(
 
     allSheetsData[ws.name] = sheetRows;
 
-    const upperSheet = ws.name.toUpperCase();
-    if (cleanTarget && (upperSheet === cleanTarget || upperSheet.includes(cleanTarget))) {
-      matchedSheet = ws;
+    // Specific sheet selection takes highest priority
+    if (cleanSelectedSheet && cleanSelectedSheet !== 'ALL') {
+      if (ws.name.toUpperCase() === cleanSelectedSheet.toUpperCase()) {
+        matchedSheet = ws;
+      }
+    } else if (cleanTarget) {
+      const upperSheet = ws.name.toUpperCase();
+      if (upperSheet === cleanTarget || upperSheet.includes(cleanTarget)) {
+        matchedSheet = ws;
+      }
     }
   }
 
-  // If the matchedSheet has no rows, fallback to first non-empty sheet
-  if ((allSheetsData[matchedSheet.name] || []).length === 0) {
+  // If specific sheet was selected but empty or fallback
+  if ((allSheetsData[matchedSheet.name] || []).length === 0 && (!cleanSelectedSheet || cleanSelectedSheet === 'ALL')) {
     for (const ws of workbook.worksheets) {
       if ((allSheetsData[ws.name] || []).length > 0) {
         matchedSheet = ws;
@@ -1649,7 +1686,8 @@ async function parseWithExcelJS(
 function parseWithSheetJS(
   data: Uint8Array | ArrayBuffer | string,
   type: 'array' | 'binary' | 'buffer',
-  targetDepotCode?: string
+  targetDepotCode?: string,
+  selectedSheetName?: string
 ): { jsonRows: any[][]; sheetName: string; allSheetsData: Record<string, any[][]> } {
   const workbook = XLSX.read(data, {
     type: type as any,
@@ -1665,6 +1703,7 @@ function parseWithSheetJS(
   }
 
   const cleanTarget = (targetDepotCode || '').toUpperCase().trim();
+  const cleanSelectedSheet = (selectedSheetName || '').trim();
   let matchedSheetName = workbook.SheetNames[0];
 
   const allSheetsData: Record<string, any[][]> = {};
@@ -1673,9 +1712,16 @@ function parseWithSheetJS(
     if (ws) {
       const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
       allSheetsData[sName] = rows;
-      const upper = sName.toUpperCase();
-      if (cleanTarget && (upper === cleanTarget || upper.includes(cleanTarget))) {
-        matchedSheetName = sName;
+
+      if (cleanSelectedSheet && cleanSelectedSheet !== 'ALL') {
+        if (sName.toUpperCase() === cleanSelectedSheet.toUpperCase()) {
+          matchedSheetName = sName;
+        }
+      } else if (cleanTarget) {
+        const upper = sName.toUpperCase();
+        if (upper === cleanTarget || upper.includes(cleanTarget)) {
+          matchedSheetName = sName;
+        }
       }
     }
   }
@@ -1706,7 +1752,7 @@ export async function parseExcelFile(
 
   // Strategy 1: ExcelJS (Primary, immune to call stack overflow on OpenXML .xlsx)
   try {
-    extractedData = await parseWithExcelJS(arrayBuffer, options.targetDepotCode);
+    extractedData = await parseWithExcelJS(arrayBuffer, options.targetDepotCode, options.selectedSheetName);
   } catch (excelJsError: any) {
     console.warn('ExcelJS parsing failed or non-xlsx format, attempting SheetJS fallback:', excelJsError);
   }
@@ -1715,7 +1761,7 @@ export async function parseExcelFile(
   if (!extractedData || !extractedData.jsonRows || extractedData.jsonRows.length === 0) {
     try {
       const uint8 = new Uint8Array(arrayBuffer);
-      extractedData = parseWithSheetJS(uint8, 'array', options.targetDepotCode);
+      extractedData = parseWithSheetJS(uint8, 'array', options.targetDepotCode, options.selectedSheetName);
     } catch (sheetJsError: any) {
       console.warn('SheetJS array read failed, attempting chunked binary string fallback:', sheetJsError);
       try {
@@ -1726,7 +1772,7 @@ export async function parseExcelFile(
           const chunk = uint8.subarray(i, i + chunkSize);
           binary += String.fromCharCode.apply(null, Array.from(chunk));
         }
-        extractedData = parseWithSheetJS(binary, 'binary', options.targetDepotCode);
+        extractedData = parseWithSheetJS(binary, 'binary', options.targetDepotCode, options.selectedSheetName);
       } catch (finalErr: any) {
         throw new Error(
           finalErr.message?.includes('call stack')
@@ -1741,26 +1787,37 @@ export async function parseExcelFile(
     throw new Error('Excel 檔案內未能讀取到任何資料行');
   }
 
-  // Parse the primary sheet
+  // Parse the selected or primary sheet
   const primaryResult = parseGenericTableRows(extractedData.jsonRows, options);
 
-  // If there are multiple sheets across different stations, parse each sheet and merge into reportsByStationMap
-  if (extractedData.allSheetsData) {
+  // If ALL sheets selected (or default), parse each sheet and merge all stations into reportsByStationMap
+  if (extractedData.allSheetsData && (!options.selectedSheetName || options.selectedSheetName === 'ALL')) {
     const multiStationMap: Record<string, Partial<MaintenanceReportData>> = {
       ...(primaryResult.reportsByStationMap || {}),
     };
 
     for (const [sheetName, sheetRows] of Object.entries(extractedData.allSheetsData)) {
-      if (sheetRows.length > 1 && sheetName !== extractedData.sheetName) {
+      if (sheetRows.length > 1) {
         try {
           const detectedCode = detectLocationCode(sheetName);
           const sheetResult = parseGenericTableRows(sheetRows, {
             ...options,
             targetDepotCode: detectedCode || options.targetDepotCode,
           });
+
+          // Add sheet-level station report if it contains items
           const code = sheetResult.detectedLocation || detectedCode;
           if (code && sheetResult.items && sheetResult.items.length > 0) {
             multiStationMap[code] = sheetResult;
+          }
+
+          // Also merge sub-stations found inside this sheet
+          if (sheetResult.reportsByStationMap) {
+            Object.entries(sheetResult.reportsByStationMap).forEach(([stn, rpt]) => {
+              if (rpt && rpt.items && rpt.items.length > 0) {
+                multiStationMap[stn] = rpt;
+              }
+            });
           }
         } catch {
           // ignore non-table sheets (cover page, instructions, etc.)
@@ -1769,6 +1826,21 @@ export async function parseExcelFile(
     }
 
     primaryResult.reportsByStationMap = multiStationMap;
+
+    // If primary result had no items (e.g. default target wasn't in sheet 1),
+    // pick the first station that has items to provide immediate feedback!
+    if ((!primaryResult.items || primaryResult.items.length === 0) && Object.keys(multiStationMap).length > 0) {
+      const firstValidStn = Object.keys(multiStationMap)[0];
+      const validRpt = multiStationMap[firstValidStn] as any;
+      if (validRpt && validRpt.items) {
+        primaryResult.detectedLocation = firstValidStn;
+        primaryResult.depotCode = firstValidStn;
+        primaryResult.depotTitle = validRpt.depotTitle;
+        primaryResult.items = validRpt.items;
+        primaryResult.overallTotals = validRpt.overallTotals;
+        primaryResult.matchedItemsSummary = validRpt.matchedItemsSummary;
+      }
+    }
   }
 
   return primaryResult;

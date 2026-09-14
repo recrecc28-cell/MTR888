@@ -22,7 +22,7 @@ import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { ArchiveHistoryModal } from './components/ArchiveHistoryModal';
 import { HelpGuideModal } from './components/HelpGuideModal';
 import { PPTModal } from './components/PPTModal';
-import { exportToPdf, printDocument } from './utils/pdfExport';
+import { exportToPdf, exportAllStationsToPdf, printDocument } from './utils/pdfExport';
 import {
   Check,
   SlidersHorizontal,
@@ -31,6 +31,7 @@ import {
   Trash2,
   FileSpreadsheet,
   ClipboardPaste,
+  Layers,
 } from 'lucide-react';
 
 const STORAGE_KEY_REPORTS_MAP = 'mtr_pm_reports_v5_cleared_depots';
@@ -332,7 +333,40 @@ export default function App() {
       setCurrentDepot(targetCode);
     }
 
-    showToast(`成功匯入 ${fileName} (站點: ${targetCode})`);
+    const stationMapKeys = parsedData.reportsByStationMap
+      ? Object.keys(parsedData.reportsByStationMap)
+      : [];
+    const count = stationMapKeys.length;
+    if (count > 1) {
+      showToast(`成功匯入 ${fileName}：共識別 ${count} 個站點 (${stationMapKeys.slice(0, 4).join(', ')}${count > 4 ? '...' : ''})，可一鍵匯出所有站點 PDF！`);
+    } else {
+      showToast(`成功匯入 ${fileName} (站點: ${targetCode})`);
+    }
+  };
+
+  // List of all stations that currently have items
+  const stationsWithData = useMemo(() => {
+    return Object.keys(reportsByDepot).filter(
+      (code) => (reportsByDepot[code]?.items?.length || 0) > 0
+    );
+  }, [reportsByDepot]);
+
+  // Clear TMD/TWD/PHD preset items (PM W/O & Work Description) keeping only station names
+  const handleClearTmdTwdPhd = () => {
+    if (
+      window.confirm(
+        '確定要清空 TMD、TWD、PHD 車廠的預設內容嗎？\n\n此操作將會：\n1. 刪除 TMD、TWD、PHD 的 PM W/O 及 WORK DESCRIPTION\n2. 只保留車站名稱，方便您導入新內容\n\n是否確定清空？'
+      )
+    ) {
+      setReportsByDepot((prev) => {
+        const nextMap = { ...prev };
+        ['TMD', 'TWD', 'PHD'].forEach((code) => {
+          nextMap[code] = createEmptyReport(code);
+        });
+        return nextMap;
+      });
+      showToast('已成功清空 TMD / TWD / PHD 預設內容！');
+    }
   };
 
   const handleSaveToArchive = () => {
@@ -373,6 +407,7 @@ export default function App() {
     }
   };
 
+  // Export single current station PDF
   const handleExportPdf = async () => {
     showToast('正在產生並下載 A4 PDF 報告...');
     try {
@@ -383,6 +418,33 @@ export default function App() {
       console.error(err);
       showToast('切換為列印輸出模式');
       window.print();
+    }
+  };
+
+  // Export ALL stations to a single PDF (one station name per PDF sheet)
+  const handleExportAllStationsPdf = async () => {
+    const activeStations = stationsWithData.length > 0 ? stationsWithData : [currentDepot];
+    showToast(`正在產生 ${activeStations.length} 個站點的 PDF 報告 (一站一頁)...`);
+    try {
+      const elementIds = activeStations.map((code) => `pdf-station-${code}`);
+      const fileName = `MTR_PM_Report_All_${activeStations.length}_Stations_${reportData.reportMonthYear.replace(/\s+/g, '_')}.pdf`;
+      await exportAllStationsToPdf(
+        elementIds,
+        fileName,
+        'landscape',
+        (curr, total) => {
+          showToast(`正在轉換 PDF 頁面 (${curr} / ${total} 站)...`);
+        }
+      );
+      showToast(`成功匯出全部 ${activeStations.length} 個站點 PDF (一站一頁)！`);
+    } catch (err) {
+      console.error('Failed to export all stations to pdf', err);
+      showToast('PDF 匯出失敗，改為列印模式...');
+      document.body.classList.add('print-all-mode');
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('print-all-mode');
+      }, 1000);
     }
   };
 
@@ -481,10 +543,13 @@ export default function App() {
         onUploadExcelClick={() => setIsExcelUploadOpen(true)}
         onResetDefaultPdfClick={handleResetDefaultPdf}
         onClearAllDataClick={handleClearAllData}
+        onClearTmdTwdPhdClick={handleClearTmdTwdPhd}
         onLoadSampleClick={handleLoadSampleLak}
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
+        onExportAllStationsPdfClick={handleExportAllStationsPdf}
+        stationsWithDataCount={stationsWithData.length}
         onPrintClick={handlePrint}
         onOpenHelpClick={() => setIsHelpOpen(true)}
         onOpenPptClick={() => setIsPptOpen(true)}
@@ -562,11 +627,24 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right: Reset, Clear All Data, Fine-Tune Toggle & Meta info */}
+          {/* Right: Multi-Station Export, Reset, Clear All Data, Fine-Tune Toggle & Meta info */}
           <div className="flex items-center gap-2">
             <span className="hidden xl:inline text-xs text-slate-500 font-mono mr-1">
               {reportData.reportMonthYear} ‧ {reportData.items.length} 項
             </span>
+
+            {/* Export All Stations Button (shown if more than 1 station has data) */}
+            {stationsWithData.length > 1 && (
+              <button
+                type="button"
+                onClick={handleExportAllStationsPdf}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+                title={`一鍵匯出所有 ${stationsWithData.length} 個站點的 PDF (一站一頁)`}
+              >
+                <Layers className="w-3.5 h-3.5 text-white" />
+                <span>匯出全部 ({stationsWithData.length} 站 ‧ 一站一頁)</span>
+              </button>
+            )}
 
             {/* Clear Current Station Button */}
             <button
@@ -579,6 +657,17 @@ export default function App() {
               <span>清空本站 (Clear Station)</span>
             </button>
 
+            {/* Clear TMD/TWD/PHD Preset Button (User Directive: 不要清空 TMD/TWD/PHD 預設按鈕) */}
+            <button
+              type="button"
+              onClick={handleClearTmdTwdPhd}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="清空 TMD/TWD/PHD 車廠的 PM W/O 及 WORK DESCRIPTION 預設內容，只留車廠名"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+              <span>清空 TMD/TWD/PHD 預設</span>
+            </button>
+
             {/* Clear All Data Button */}
             <button
               type="button"
@@ -587,7 +676,7 @@ export default function App() {
               title="清空所有 20 個車站及車廠的資料，還原為初始狀態 (Clear All Data)"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              <span>清空全部資料 (Clear All)</span>
+              <span>清空全部 (Clear All)</span>
             </button>
 
             {/* Fine-Tune Toggle */}
@@ -654,6 +743,29 @@ export default function App() {
         isOpen={isPptOpen}
         onClose={() => setIsPptOpen(false)}
       />
+
+      {/* Offscreen Multi-Station PDF Render Container for High-Quality Multi-Page PDF Export (One station name one PDF sheet) */}
+      <div
+        id="all-stations-export-container"
+        style={{
+          position: 'fixed',
+          left: '-99999px',
+          top: 0,
+          width: '1400px',
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
+        {(stationsWithData.length > 0 ? stationsWithData : [currentDepot]).map((stnCode) => (
+          <div key={stnCode} id={`pdf-station-${stnCode}`} className="station-pdf-page bg-white p-4">
+            <ReportPDFPreview
+              reportData={reportsByDepot[stnCode] || createEmptyReport(stnCode)}
+              fineTuneSettings={fineTuneSettings}
+              isEditingEnabled={false}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

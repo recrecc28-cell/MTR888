@@ -3,6 +3,7 @@ import {
   parseExcelFile,
   parsePastedText,
   downloadSampleExcelTemplate,
+  getExcelWorksheetNames,
   ParsedTableResult,
 } from '../utils/excelHelper';
 import { MaintenanceReportData, MaintenanceItem } from '../types';
@@ -18,6 +19,7 @@ import {
   ClipboardPaste,
   ArrowRight,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 import {
   ALL_MTR_LOCATIONS,
@@ -59,6 +61,10 @@ export const ExcelUploadModal: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Sheet selection state
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState<string>('ALL');
+
   // Live parsed preview
   const [livePreview, setLivePreview] = useState<ParsedTableResult | null>(null);
 
@@ -77,6 +83,8 @@ export const ExcelUploadModal: React.FC<Props> = ({
       setSelectedFile(null);
       setPastedText('');
       setLivePreview(null);
+      setSheetNames([]);
+      setSelectedSheet('ALL');
     }
   }, [isOpen, currentDepotCode, defaultTab]);
 
@@ -138,12 +146,22 @@ export const ExcelUploadModal: React.FC<Props> = ({
         const detected = detectStationFromFileName(file.name);
         if (detected) setTargetDepotCode(detected);
 
+        // Read worksheet names
+        try {
+          const names = await getExcelWorksheetNames(file);
+          setSheetNames(names);
+          setSelectedSheet('ALL');
+        } catch {
+          setSheetNames([]);
+        }
+
         // Run live parse
         try {
           const parsed = await parseExcelFile(file, {
             targetDepotCode: detected || targetDepotCode,
             filterByDepot,
             existingItems,
+            selectedSheetName: 'ALL',
           });
           setLivePreview(parsed);
           if (parsed.detectedLocation) setTargetDepotCode(parsed.detectedLocation);
@@ -164,17 +182,49 @@ export const ExcelUploadModal: React.FC<Props> = ({
       const detected = detectStationFromFileName(file.name);
       if (detected) setTargetDepotCode(detected);
 
+      // Read worksheet names
+      try {
+        const names = await getExcelWorksheetNames(file);
+        setSheetNames(names);
+        setSelectedSheet('ALL');
+      } catch {
+        setSheetNames([]);
+      }
+
       try {
         const parsed = await parseExcelFile(file, {
           targetDepotCode: detected || targetDepotCode,
           filterByDepot,
           existingItems,
+          selectedSheetName: 'ALL',
         });
         setLivePreview(parsed);
         if (parsed.detectedLocation) setTargetDepotCode(parsed.detectedLocation);
       } catch (err: any) {
         setLivePreview(null);
       }
+    }
+  };
+
+  const handleSheetChange = async (sheetName: string) => {
+    setSelectedSheet(sheetName);
+    if (!selectedFile) return;
+
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const parsed = await parseExcelFile(selectedFile, {
+        targetDepotCode,
+        filterByDepot,
+        existingItems,
+        selectedSheetName: sheetName,
+      });
+      setLivePreview(parsed);
+      if (parsed.detectedLocation) setTargetDepotCode(parsed.detectedLocation);
+    } catch (err: any) {
+      setErrorMessage(err.message || '讀取工作表資料失敗');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -204,8 +254,11 @@ export const ExcelUploadModal: React.FC<Props> = ({
           targetDepotCode: targetDepotCode.trim().toUpperCase() || 'AIR',
           filterByDepot,
           existingItems,
+          selectedSheetName: selectedSheet,
         });
-        label = selectedFile.name;
+        label = selectedSheet && selectedSheet !== 'ALL'
+          ? `${selectedFile.name} [工作表: ${selectedSheet}]`
+          : selectedFile.name;
       }
 
       onDataParsed(parsedData, label);
@@ -223,6 +276,14 @@ export const ExcelUploadModal: React.FC<Props> = ({
   };
 
   const currentLocation = getLocationByCode(targetDepotCode);
+
+  // Calculate multi-station counts
+  const multiStationEntries = livePreview?.reportsByStationMap
+    ? (Object.entries(livePreview.reportsByStationMap) as [string, any][]).filter(
+        ([_, rpt]) => (rpt?.items?.length || 0) > 0
+      )
+    : [];
+  const multiStationCount = multiStationEntries.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 no-print animate-in fade-in duration-200">
@@ -343,46 +404,81 @@ export const ExcelUploadModal: React.FC<Props> = ({
 
           {/* TAB 1: File Upload */}
           {activeTab === 'upload' && (
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleFileDrop}
-              className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${
-                isDragging
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : selectedFile
-                  ? 'border-emerald-600 bg-emerald-50'
-                  : 'border-slate-300 hover:border-slate-400 bg-slate-50'
-              }`}
-              onClick={() => document.getElementById('excel-file-input')?.click()}
-            >
-              <input
-                id="excel-file-input"
-                type="file"
-                accept=".xlsx, .xls, .csv"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+            <div className="space-y-3">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleFileDrop}
+                className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${
+                  isDragging
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : selectedFile
+                    ? 'border-emerald-600 bg-emerald-50/70'
+                    : 'border-slate-300 hover:border-slate-400 bg-slate-50'
+                }`}
+                onClick={() => document.getElementById('excel-file-input')?.click()}
+              >
+                <input
+                  id="excel-file-input"
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
 
-              {selectedFile ? (
-                <div className="space-y-1.5">
-                  <CheckCircle className="w-8 h-8 text-emerald-600 mx-auto" />
-                  <p className="text-sm font-semibold text-emerald-700">{selectedFile.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {(selectedFile.size / 1024).toFixed(1)} KB ‧ 點擊更換檔案
+                {selectedFile ? (
+                  <div className="space-y-1.5">
+                    <CheckCircle className="w-8 h-8 text-emerald-600 mx-auto" />
+                    <p className="text-sm font-semibold text-emerald-800">{selectedFile.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {(selectedFile.size / 1024).toFixed(1)} KB ‧ 點擊可更換檔案
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Upload className="w-8 h-8 text-slate-400 mx-auto" />
+                    <p className="text-sm font-medium text-slate-700">
+                      拖拽 Excel (.xlsx) 檔案到此處，或{' '}
+                      <span className="text-emerald-600 underline">點擊瀏覽檔案</span>
+                    </p>
+                    <p className="text-xs text-slate-500">支援單站 Excel (如 LAK.xlsx) 或多工作表/多站點總表</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Sheet Selector (Only visible if file has multiple sheets or when file selected) */}
+              {selectedFile && sheetNames.length > 0 && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <Layers className="w-4 h-4 text-emerald-600" />
+                      <span>選擇 Excel 工作表 (Worksheet)：</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      共有 {sheetNames.length} 個工作表
+                    </span>
+                  </div>
+
+                  <select
+                    value={selectedSheet}
+                    onChange={(e) => handleSheetChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none cursor-pointer shadow-2xs"
+                  >
+                    <option value="ALL">
+                      🌟 全部工作表 (All Sheets) - 自動輸出所有站點 (一站一頁 PDF Sheet)
+                    </option>
+                    {sheetNames.map((s) => (
+                      <option key={s} value={s}>
+                        📄 工作表：{s}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    選擇「全部工作表」將會整合並讀取各工作表內的所有站點，為每個站點各自產出一張 PDF Sheet。
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Upload className="w-8 h-8 text-slate-400 mx-auto" />
-                  <p className="text-sm font-medium text-slate-700">
-                    拖拽 Excel (.xlsx) 檔案到此處，或{' '}
-                    <span className="text-emerald-600 underline">點擊瀏覽檔案</span>
-                  </p>
-                  <p className="text-xs text-slate-500">支援單站 Excel (如 LAK.xlsx, AIR.xlsx) 或綜合清單</p>
                 </div>
               )}
             </div>
@@ -417,17 +513,48 @@ export const ExcelUploadModal: React.FC<Props> = ({
 
           {/* Live Recognition Summary Card (WHEN DATA IS PARSED) */}
           {livePreview && (
-            <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2 animate-in fade-in duration-150">
+            <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2.5 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
                   <CheckCircle className="w-4 h-4 text-emerald-600" />
                   <span>系統已成功識別數據</span>
                 </div>
+                {multiStationCount > 1 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white tracking-wide">
+                    偵測到 {multiStationCount} 個站點 (一站一頁)
+                  </span>
+                )}
               </div>
+
+              {/* Multi-Station Summary Card if multiple stations exist */}
+              {multiStationCount > 1 && (
+                <div className="p-2.5 bg-white/95 border border-emerald-300 rounded-lg shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-950">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>已識別站點清單 (將輸出所有站點，一站一頁)：</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {multiStationEntries.map(([stn, rpt]) => (
+                      <span
+                        key={stn}
+                        className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-1"
+                      >
+                        <Train className="w-3 h-3 text-emerald-600" />
+                        <span>{stn}: {rpt?.items?.length || 0} 項</span>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500 pt-0.5">
+                    💡 匯入後將自動為每個站點建立專屬報告，並支援一鍵匯出所有站點 PDF (每站獨立一張 A4)！
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-emerald-200/60">
                 <div>
-                  <span className="text-slate-500">識別站點：</span>
+                  <span className="text-slate-500">主要/首站：</span>
                   <span className="font-bold text-emerald-800 font-mono ml-1">
                     {livePreview.detectedLocation || targetDepotCode}
                   </span>
@@ -447,7 +574,7 @@ export const ExcelUploadModal: React.FC<Props> = ({
 
               {livePreview.matchedItemsSummary && livePreview.matchedItemsSummary.length > 0 && (
                 <div className="mt-1 pt-1.5 border-t border-emerald-200/60 text-xs">
-                  <span className="text-slate-600 font-medium">對應項目明細：</span>
+                  <span className="text-slate-600 font-medium">對應項目明細 (首站)：</span>
                   <div className="mt-1 space-y-1 max-h-28 overflow-y-auto">
                     {livePreview.matchedItemsSummary.map((item, idx) => (
                       <div
@@ -510,7 +637,11 @@ export const ExcelUploadModal: React.FC<Props> = ({
                 '處理中...'
               ) : (
                 <>
-                  <span>確認讀取並填入報告</span>
+                  <span>
+                    {multiStationCount > 1
+                      ? `確認匯入全部 ${multiStationCount} 個站點 (一站一頁)`
+                      : `確認讀取並填入報告 (${targetDepotCode})`}
+                  </span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}

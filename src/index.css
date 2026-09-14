@@ -51,6 +51,40 @@
       break-inside: avoid;
     }
 
+    /* Multi-station printing support (one station name per PDF sheet) */
+    body:not(.print-all-mode) #all-stations-export-container {
+      display: none !important;
+    }
+
+    body.print-all-mode #pdf-report-canvas {
+      display: none !important;
+    }
+
+    body.print-all-mode #all-stations-export-container {
+      display: block !important;
+      position: static !important;
+      left: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .station-pdf-page {
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      width: 100% !important;
+      background: #ffffff !important;
+      margin-bottom: 0 !important;
+      padding: 4mm !important;
+    }
+
+    .station-pdf-page:last-child {
+      page-break-after: auto !important;
+      break-after: auto !important;
+    }
+
     /* Clean inputs/textareas during print */
     input, textarea {
       border: none !important;
