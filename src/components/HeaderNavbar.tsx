@@ -17,27 +17,23 @@ import {
 } from 'lucide-react';
 
 interface Props {
-  onUploadExcelClick: () => void;
   onSaveToArchiveClick: () => void;
   onOpenArchiveHistoryClick: () => void;
   onExportPdfClick: () => void;
-  onExportAllStationsPdfClick?: () => void;
-  stationsWithDataCount?: number;
-  onPrintClick: () => void;
+  onPrintClick?: () => void;
   onOpenHelpClick: () => void;
   onOpenPptClick?: () => void;
   lastSavedTime?: string;
   archiveCount?: number;
+  onUploadExcelClick?: () => void;
+  onExportAllStationsPdfClick?: () => void;
+  stationsWithDataCount?: number;
 }
 
 export const HeaderNavbar: React.FC<Props> = ({
-  onUploadExcelClick,
   onSaveToArchiveClick,
   onOpenArchiveHistoryClick,
   onExportPdfClick,
-  onExportAllStationsPdfClick,
-  stationsWithDataCount = 0,
-  onPrintClick,
   onOpenHelpClick,
   onOpenPptClick,
   lastSavedTime,
@@ -83,44 +79,20 @@ export const HeaderNavbar: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Primary Action Buttons & More Dropdown */}
+        {/* Primary Action Buttons & More Dropdown (No duplicate buttons) */}
         <div className="flex items-center gap-2">
-          {/* Core Button 1: Upload Excel */}
-          <button
-            type="button"
-            onClick={onUploadExcelClick}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
-            title="上傳港鐵保養清單 Excel 檔 (支援選擇工作表與輸出所有站點)"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>上傳 Excel</span>
-          </button>
-
-          {/* Export All Stations Button (Prominently shown if multiple stations have data) */}
-          {onExportAllStationsPdfClick && stationsWithDataCount > 1 && (
-            <button
-              type="button"
-              onClick={onExportAllStationsPdfClick}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer animate-in fade-in"
-              title={`一鍵輸出全部 ${stationsWithDataCount} 個站點的 PDF (一站一頁)`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>匯出全部站點 ({stationsWithDataCount} 站 ‧ 一站一頁)</span>
-            </button>
-          )}
-
-          {/* Core Button 2: Export Single PDF */}
+          {/* Core Button: Export PDF */}
           <button
             type="button"
             onClick={onExportPdfClick}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
-            title="匯出目前選取站點的 A4 PDF 報告"
+            title="匯出目前站點 A4 PDF 報告"
           >
             <FileDown className="w-4 h-4" />
-            <span>匯出目前站點 PDF</span>
+            <span>匯出 PDF</span>
           </button>
 
-          {/* More Options Dropdown (Cleanly collapses secondary buttons) */}
+          {/* More Options Dropdown (Cleanly collapses secondary utility features) */}
           <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -133,28 +105,7 @@ export const HeaderNavbar: React.FC<Props> = ({
             </button>
 
             {isMoreOpen && (
-              <div className="absolute right-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs text-slate-700 animate-in fade-in slide-in-from-top-1">
-                {onExportAllStationsPdfClick && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMoreOpen(false);
-                      onExportAllStationsPdfClick();
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-indigo-50 text-indigo-700 flex items-center justify-between transition-colors cursor-pointer font-medium"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>匯出所有站點 PDF (一站一頁)</span>
-                    </div>
-                    {stationsWithDataCount > 0 && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 font-bold">
-                        {stationsWithDataCount} 站
-                      </span>
-                    )}
-                  </button>
-                )}
-
+              <div className="absolute right-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs text-slate-700 animate-in fade-in slide-in-from-top-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -184,18 +135,6 @@ export const HeaderNavbar: React.FC<Props> = ({
                       {archiveCount}
                     </span>
                   )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMoreOpen(false);
-                    onPrintClick();
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5 text-slate-600" />
-                  <span>直接列印畫面</span>
                 </button>
 
                 <div className="my-1 border-t border-slate-100" />

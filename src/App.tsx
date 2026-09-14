@@ -514,8 +514,12 @@ export default function App() {
     }
   };
 
-  // Export single current station PDF
+  // Export single current station PDF (or all if in ALL mode)
   const handleExportPdf = async () => {
+    if (currentDepot === 'ALL') {
+      await handleExportAllStationsPdf();
+      return;
+    }
     showToast('正在產生並下載 A4 PDF 報告...');
     try {
       const fileName = `MTR_PM_Report_${reportData.depotCode}_${reportData.reportMonthYear.replace(/\s+/g, '_')}.pdf`;
@@ -632,15 +636,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Top Header Navbar: Simplified to Upload Excel, Export PDF, and clean More dropdown */}
+      {/* Top Header Navbar */}
       <HeaderNavbar
-        onUploadExcelClick={() => setIsExcelUploadOpen(true)}
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
-        onExportAllStationsPdfClick={handleExportAllStationsPdf}
-        stationsWithDataCount={stationsWithData.length}
-        onPrintClick={handlePrint}
         onOpenHelpClick={() => setIsHelpOpen(true)}
         onOpenPptClick={() => setIsPptOpen(true)}
         lastSavedTime={lastSavedTime}
@@ -724,10 +724,10 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleOpenUploadModal}
-                className="px-2.5 py-1 rounded-md text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                title="上傳 Excel 檔案自動識別"
+                className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="上傳港鐵保養清單 Excel 檔案 (自動識別與全站分流)"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-600" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
                 <span>上傳 Excel</span>
               </button>
             </div>
@@ -829,14 +829,6 @@ export default function App() {
                     顯示全部 20 站
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handlePrint}
-                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>列印全部</span>
-                </button>
               </div>
             </div>
           )}
