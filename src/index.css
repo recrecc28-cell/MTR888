@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Print Optimization Styles */
+  @media print {
+    /* Hide all non-printable UI elements */
+    .no-print,
+    header,
+    nav,
+    aside,
+    button,
+    .no-print-area {
+      display: none !important;
+    }
+
+    /* Configure printable page */
+    @page {
+      size: A4 landscape;
+      margin: 5mm;
+    }
+
+    body, html {
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
+    /* Container reset */
+    #root, main {
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      background: #ffffff !important;
+    }
+
+    /* Center and format report canvas */
+    #pdf-report-canvas {
+      box-shadow: none !important;
+      border: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+      padding: 4mm !important;
+      background: #ffffff !important;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Clean inputs/textareas during print */
+    input, textarea {
+      border: none !important;
+      background: transparent !important;
+      outline: none !important;
+      resize: none !important;
+      box-shadow: none !important;
+    }
+  }
+}

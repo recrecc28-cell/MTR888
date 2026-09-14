@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix MTR Maintenance Report Automator",
+  "description": "Transform MTR maintenance Excel data into editable PDF reports with precise adjustment tools to automate your daily filing workflow.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
