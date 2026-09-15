@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   FileSpreadsheet,
-  FileDown,
+  Download,
   MoreVertical,
   RotateCcw,
   Archive,
   History,
-  Printer,
   HelpCircle,
   Presentation,
   CheckCircle2,
@@ -20,7 +19,6 @@ interface Props {
   onSaveToArchiveClick: () => void;
   onOpenArchiveHistoryClick: () => void;
   onExportPdfClick: () => void;
-  onPrintClick?: () => void;
   onOpenHelpClick: () => void;
   onOpenPptClick?: () => void;
   lastSavedTime?: string;
@@ -81,15 +79,15 @@ export const HeaderNavbar: React.FC<Props> = ({
 
         {/* Primary Action Buttons & More Dropdown (No duplicate buttons) */}
         <div className="flex items-center gap-2">
-          {/* Core Button: Export PDF */}
+          {/* Core Button: Download PDF */}
           <button
             type="button"
             onClick={onExportPdfClick}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
-            title="匯出目前站點 A4 PDF 報告"
+            title="下載目前站點 A4 PDF 報告 (包含完整簽名、自動縮成1站1頁)"
           >
-            <FileDown className="w-4 h-4" />
-            <span>匯出 PDF</span>
+            <Download className="w-4 h-4" />
+            <span>下載 PDF</span>
           </button>
 
           {/* More Options Dropdown (Cleanly collapses secondary utility features) */}

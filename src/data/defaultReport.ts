@@ -1,52 +1,27 @@
 import { MaintenanceReportData, FineTuneSettings } from '../types';
 import { getLocationTitle } from './mtrLocations';
+import { createStandardStationReport, STATION_STANDARD_TEMPLATES } from './stationTemplates';
 
-export const defaultReportData: MaintenanceReportData = {
-  id: 'report-empty',
-  depotCode: '',
-  depotTitle: '',
-  reportMonthYear: '',
-  contractNo: '',
-  items: [],
-  overallTotals: {
-    pmWoTotal: '',
-    qtyTotal: '',
-    mTotal: '',
-    m2Total: '',
-    m3Total: '',
-    m4Total: '',
-    m6Total: '',
-    yTotal: '',
-    m18Total: '',
-    y2Total: '',
-    y3Total: '',
-  },
-  signatories: {
-    preparedByName: '',
-    preparedByDate: '',
-    verifiedByName: '',
-    verifiedByDate: '',
-    endorsedByName: '',
-    endorsedByDate: '',
-  },
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+export const defaultReportData: MaintenanceReportData = createStandardStationReport('AIR', 'Aug - 2026');
 
 export const ensureReportQuantities = (report: MaintenanceReportData, depotCode?: string): MaintenanceReportData => {
+  const code = depotCode ? depotCode.toUpperCase() : (report.depotCode || '');
   return {
     ...report,
-    depotCode: depotCode ? depotCode.toUpperCase() : (report.depotCode || ''),
+    depotCode: code,
   };
 };
 
 export const createEmptyReport = (depotCode: string = ''): MaintenanceReportData => {
-  const code = (depotCode || '').toUpperCase();
+  const code = (depotCode || '').toUpperCase().trim();
+  if (code && STATION_STANDARD_TEMPLATES[code]) {
+    return createStandardStationReport(code);
+  }
   return {
     id: `report-${(code || 'new').toLowerCase()}-${Date.now()}`,
     depotCode: code,
     depotTitle: code ? getLocationTitle(code) : '',
-    reportMonthYear: 'September - 2026',
+    reportMonthYear: 'Aug - 2026',
     contractNo: 'M1202-19E',
     items: [],
     overallTotals: {
@@ -63,7 +38,42 @@ export const createEmptyReport = (depotCode: string = ''): MaintenanceReportData
       y3Total: '',
     },
     signatories: {
-      preparedByName: '',
+      preparedByName: 'NG KA HO 17914',
+      preparedByDate: '',
+      verifiedByName: '',
+      verifiedByDate: '',
+      endorsedByName: '',
+      endorsedByDate: '',
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+export const createBlankReportWithoutItems = (depotCode: string = ''): MaintenanceReportData => {
+  const code = (depotCode || '').toUpperCase().trim();
+  return {
+    id: `report-blank-${(code || 'new').toLowerCase()}-${Date.now()}`,
+    depotCode: code,
+    depotTitle: code ? getLocationTitle(code) : '',
+    reportMonthYear: 'Aug - 2026',
+    contractNo: 'M1202-19E',
+    items: [],
+    overallTotals: {
+      pmWoTotal: '',
+      qtyTotal: '',
+      mTotal: '',
+      m2Total: '',
+      m3Total: '',
+      m4Total: '',
+      m6Total: '',
+      yTotal: '',
+      m18Total: '',
+      y2Total: '',
+      y3Total: '',
+    },
+    signatories: {
+      preparedByName: 'NG KA HO 17914',
       preparedByDate: '',
       verifiedByName: '',
       verifiedByDate: '',
@@ -76,11 +86,11 @@ export const createEmptyReport = (depotCode: string = ''): MaintenanceReportData
 };
 
 export const createLAKReport = (): MaintenanceReportData => {
-  return createEmptyReport('LAK');
+  return createStandardStationReport('LAK');
 };
 
 export const createDefaultReport = (depotCode: string = ''): MaintenanceReportData => {
-  return createEmptyReport(depotCode);
+  return createStandardStationReport(depotCode || 'AIR');
 };
 
 export const defaultFineTuneSettings: FineTuneSettings = {

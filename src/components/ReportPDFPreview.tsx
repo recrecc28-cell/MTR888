@@ -9,6 +9,7 @@ interface Props {
   onUpdateReportData?: (newData: MaintenanceReportData) => void;
   isEditingEnabled?: boolean;
   onOpenSignatureModal?: (role: 'preparedBy' | 'verifiedBy' | 'endorsedBy') => void;
+  containerId?: string;
 }
 
 export const ReportPDFPreview: React.FC<Props> = ({
@@ -17,6 +18,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
   onUpdateReportData = (_newData: MaintenanceReportData) => {},
   isEditingEnabled = true,
   onOpenSignatureModal,
+  containerId,
 }) => {
   const { items, signatories } = reportData;
 
@@ -375,7 +377,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
     <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto">
       {/* Paper Container matching screenshot proportions */}
       <div
-        id="pdf-report-canvas"
+        id={containerId || "pdf-report-canvas"}
         style={containerStyle}
         className="bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text"
       >

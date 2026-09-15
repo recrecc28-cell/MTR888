@@ -5,9 +5,14 @@ import {
   defaultFineTuneSettings,
   createDefaultReport,
   createEmptyReport,
+  createBlankReportWithoutItems,
   createLAKReport,
   ensureReportQuantities,
 } from './data/defaultReport';
+import {
+  createStandardStationReport,
+  STATION_STANDARD_TEMPLATES,
+} from './data/stationTemplates';
 import {
   ALL_MTR_LOCATIONS,
   MTR_STATIONS_LIST,
@@ -23,7 +28,7 @@ import { ArchiveHistoryModal } from './components/ArchiveHistoryModal';
 import { HelpGuideModal } from './components/HelpGuideModal';
 import { PPTModal } from './components/PPTModal';
 import { SignatureModal, SignatoryRole } from './components/SignatureModal';
-import { exportToPdf, exportAllStationsToPdf, printDocument } from './utils/pdfExport';
+import { exportToPdf, exportAllStationsToPdf } from './utils/pdfExport';
 import {
   Check,
   SlidersHorizontal,
@@ -33,10 +38,11 @@ import {
   FileSpreadsheet,
   ClipboardPaste,
   Layers,
-  Printer,
+  Download,
+  FileCheck2,
 } from 'lucide-react';
 
-const STORAGE_KEY_REPORTS_MAP = 'mtr_pm_reports_v5_cleared_depots';
+const STORAGE_KEY_REPORTS_MAP = 'mtr_pm_reports_v7_std_templates';
 const STORAGE_KEY_ACTIVE_DEPOT = 'mtr_pm_active_depot_code';
 const STORAGE_KEY_FINETUNE = 'mtr_pm_finetune_settings';
 const STORAGE_KEY_ARCHIVES = 'mtr_pm_archives_history';
@@ -93,7 +99,6 @@ export default function App() {
   // Reports Map by Station/Depot
   const [reportsByDepot, setReportsByDepot] = useState<Record<string, MaintenanceReportData>>(() => {
     try {
-      const isPurged = localStorage.getItem(STORAGE_KEY_TMD_TWD_PHD_PURGED);
       const saved = localStorage.getItem(STORAGE_KEY_REPORTS_MAP);
       let parsedMap: Record<string, any> = {};
 
@@ -108,30 +113,23 @@ export default function App() {
       const result: Record<string, MaintenanceReportData> = {};
       ALL_MTR_LOCATIONS.forEach((loc) => {
         const code = loc.code;
-        // User directive: TMD/TWD/PHD 車廠的PM W/O, WORK DESCRIPTION 的預設內容，全部刪除, 只留車站名
-        if (!isPurged && (code === 'TMD' || code === 'TWD' || code === 'PHD')) {
-          result[code] = createEmptyReport(code);
-        } else if (parsedMap[code]) {
-          result[code] = cleanPresetItems(parsedMap[code]);
+        if (parsedMap[code] && Array.isArray(parsedMap[code].items) && parsedMap[code].items.length > 0) {
+          result[code] = parsedMap[code];
+        } else if (STATION_STANDARD_TEMPLATES[code]) {
+          // Initialize with official standard template for this station
+          result[code] = createStandardStationReport(code);
         } else {
           result[code] = createEmptyReport(code);
         }
       });
 
-      // Mark migration flag so new user imports to TMD/TWD/PHD will be preserved
-      if (!isPurged) {
-        try {
-          localStorage.setItem(STORAGE_KEY_TMD_TWD_PHD_PURGED, 'true');
-          localStorage.removeItem('mtr_pm_reports_empty_v2');
-          localStorage.removeItem('mtr_pm_reports_empty_v1');
-        } catch {}
-      }
-
       return result;
     } catch (e) {
       const result: Record<string, MaintenanceReportData> = {};
       ALL_MTR_LOCATIONS.forEach((loc) => {
-        result[loc.code] = createEmptyReport(loc.code);
+        result[loc.code] = STATION_STANDARD_TEMPLATES[loc.code]
+          ? createStandardStationReport(loc.code)
+          : createEmptyReport(loc.code);
       });
       return result;
     }
@@ -520,15 +518,14 @@ export default function App() {
       await handleExportAllStationsPdf();
       return;
     }
-    showToast('正在產生並下載 A4 PDF 報告...');
+    showToast('正在產生並下載 A4 PDF 報告 (包含簽名、自動縮成1頁)...');
     try {
-      const fileName = `MTR_PM_Report_${reportData.depotCode}_${reportData.reportMonthYear.replace(/\s+/g, '_')}.pdf`;
+      const fileName = `MTR_PM_Report_${reportData.depotCode}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
       await exportToPdf('pdf-report-canvas', fileName, 'landscape');
       showToast('PDF 報告下載完成！');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('切換為列印輸出模式');
-      window.print();
+      showToast('下載失敗：' + (err?.message || '請重試'));
     }
   };
 
@@ -537,8 +534,8 @@ export default function App() {
     const activeStations = stationsWithData.length > 0 ? stationsWithData : [currentDepot];
     showToast(`正在產生 ${activeStations.length} 個站點的 PDF 報告 (一站一頁)...`);
     try {
-      const elementIds = activeStations.map((code) => `pdf-station-${code}`);
-      const fileName = `MTR_PM_Report_All_${activeStations.length}_Stations_${reportData.reportMonthYear.replace(/\s+/g, '_')}.pdf`;
+      const elementIds = activeStations.map((code) => `export-canvas-${code}`);
+      const fileName = `MTR_PM_Report_All_${activeStations.length}_Stations_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
       await exportAllStationsToPdf(
         elementIds,
         fileName,
@@ -547,15 +544,10 @@ export default function App() {
           showToast(`正在轉換 PDF 頁面 (${curr} / ${total} 站)...`);
         }
       );
-      showToast(`成功匯出全部 ${activeStations.length} 個站點 PDF (一站一頁)！`);
-    } catch (err) {
+      showToast(`成功下載全部 ${activeStations.length} 個站點 PDF (一站一頁)！`);
+    } catch (err: any) {
       console.error('Failed to export all stations to pdf', err);
-      showToast('PDF 匯出失敗，改為列印模式...');
-      document.body.classList.add('print-all-mode');
-      window.print();
-      setTimeout(() => {
-        document.body.classList.remove('print-all-mode');
-      }, 1000);
+      showToast('下載失敗：' + (err?.message || '請確認站點內容'));
     }
   };
 
@@ -571,6 +563,43 @@ export default function App() {
     }
   };
 
+  // Apply official standard template (WORK DESCRIPTION & fixed QTY)
+  const handleApplyStandardTemplate = () => {
+    if (currentDepot === 'ALL') {
+      if (
+        !window.confirm(
+          '確定要為所有 15 個標準站點套用官方標準樣板 (WORK DESCRIPTION & 固定數量 QTY) 嗎？'
+        )
+      ) {
+        return;
+      }
+      setReportsByDepot((prev) => {
+        const next = { ...prev };
+        ALL_MTR_LOCATIONS.forEach((loc) => {
+          if (STATION_STANDARD_TEMPLATES[loc.code]) {
+            next[loc.code] = createStandardStationReport(
+              loc.code,
+              reportData.reportMonthYear || 'Aug - 2026'
+            );
+          }
+        });
+        return next;
+      });
+      showToast('已為全部 15 個標準站點載入官方標準樣板與數量！');
+    } else {
+      if (STATION_STANDARD_TEMPLATES[currentDepot]) {
+        const std = createStandardStationReport(
+          currentDepot,
+          reportData.reportMonthYear || 'Aug - 2026'
+        );
+        setReportData(std);
+        showToast(`已為站點 ${currentDepot} 載入官方標準保養清單與固定數量！`);
+      } else {
+        showToast(`站點 ${currentDepot} 暫無預設標準樣板`);
+      }
+    }
+  };
+
   const handleResetDefaultPdf = () => {
     if (currentDepot === 'ALL') {
       if (
@@ -580,7 +609,7 @@ export default function App() {
       ) {
         const freshMap: Record<string, MaintenanceReportData> = {};
         ALL_MTR_LOCATIONS.forEach((loc) => {
-          freshMap[loc.code] = createEmptyReport(loc.code);
+          freshMap[loc.code] = createBlankReportWithoutItems(loc.code);
         });
         setReportsByDepot(freshMap);
         showToast('已清空所有站點資料！');
@@ -596,14 +625,10 @@ export default function App() {
         `確定要清空目前「${locName}」的表格資料嗎？\n（將清空所有設備項目與已填寫內容）`
       )
     ) {
-      const freshReport = createEmptyReport(currentDepot);
+      const freshReport = createBlankReportWithoutItems(currentDepot);
       setReportData(freshReport);
       showToast(`已清空「${currentDepot}」表格資料！`);
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const handleSelectRegion = (code: string, newTitle: string) => {
@@ -739,28 +764,28 @@ export default function App() {
               {reportData.reportMonthYear}
             </span>
 
-            {/* Export All Stations Button */}
+            {/* Download All Stations Button */}
             {stationsWithData.length > 1 && (
               <button
                 type="button"
                 onClick={handleExportAllStationsPdf}
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer animate-in fade-in"
-                title={`一鍵匯出所有 ${stationsWithData.length} 個站點的 PDF (一站一頁)`}
+                title={`一鍵下載所有 ${stationsWithData.length} 個站點的 A4 PDF 報告 (包含完整簽名、自動縮成一站一頁)`}
               >
-                <Layers className="w-3.5 h-3.5 text-white" />
-                <span>匯出全部 ({stationsWithData.length} 站 ‧ 一站一頁)</span>
+                <Download className="w-3.5 h-3.5 text-white" />
+                <span>下載全部 ({stationsWithData.length} 站 ‧ 一站一頁)</span>
               </button>
             )}
 
-            {/* Print Button */}
+            {/* Standard Template Button (用戶要求: 載入各站標準 WORK DESCRIPTION 與固定 QTY) */}
             <button
               type="button"
-              onClick={handlePrint}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="列印目前畫面 (每個站點自動縮成一頁 A4)"
+              onClick={handleApplyStandardTemplate}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="載入官方標準 WORK DESCRIPTION 與固定 QTY 樣板"
             >
-              <Printer className="w-3.5 h-3.5 text-slate-700" />
-              <span>列印畫面</span>
+              <FileCheck2 className="w-3.5 h-3.5 text-amber-700" />
+              <span>套用標準樣板</span>
             </button>
 
             {/* Unified Clear Data Button (用戶要求: 清空本站和清空全部功能一樣, 只要其中一個按鈕就夠) */}
@@ -942,16 +967,19 @@ export default function App() {
         id="all-stations-export-container"
         style={{
           position: 'fixed',
-          left: '-99999px',
           top: 0,
-          width: '1400px',
-          zIndex: -1,
+          left: 0,
+          width: '1120px',
+          zIndex: -9999,
+          opacity: 1,
           pointerEvents: 'none',
+          backgroundColor: '#ffffff',
         }}
       >
         {(stationsWithData.length > 0 ? stationsWithData : [currentDepot]).map((stnCode) => (
-          <div key={stnCode} id={`pdf-station-${stnCode}`} className="station-pdf-page bg-white p-4">
+          <div key={stnCode} className="bg-white">
             <ReportPDFPreview
+              containerId={`export-canvas-${stnCode}`}
               reportData={reportsByDepot[stnCode] || createEmptyReport(stnCode)}
               fineTuneSettings={fineTuneSettings}
               isEditingEnabled={false}
