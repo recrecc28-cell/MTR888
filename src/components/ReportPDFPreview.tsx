@@ -3,13 +3,14 @@ import { MaintenanceReportData, FineTuneSettings, MaintenanceItem, SubWoEntry } 
 import { Plus, Trash2, PenTool, Calendar as CalendarIcon } from 'lucide-react';
 import { formatWorkDescriptionNeat } from '../utils/excelHelper';
 import { DatePickerPopover, normalizeToStandardDate } from './DatePickerPopover';
+import { EditableText, EditingContext } from './EditableText';
 
 interface Props {
   reportData: MaintenanceReportData;
   fineTuneSettings: FineTuneSettings;
   onUpdateReportData?: (newData: MaintenanceReportData) => void;
   isEditingEnabled?: boolean;
-  onOpenSignatureModal?: (role: 'preparedBy' | 'verifiedBy' | 'endorsedBy') => void;
+  onOpenSignatureModal?: (role: 'preparedBy' | 'verifiedBy' | 'endorsedBy', stationCode?: string) => void;
   onSyncDateToAllStations?: (
     dateVal: string,
     syncAllThreeRoles: boolean,
@@ -362,57 +363,6 @@ export const ReportPDFPreview: React.FC<Props> = ({
   const colTradeGroup = `${fineTuneSettings.colWidthTradeGroup ?? 40}%`;
   const colFreq = `${((fineTuneSettings.colWidthTradeGroup ?? 40) / 8).toFixed(4)}%`;
 
-  // Editable inline text component with multiline support for WORK DESCRIPTION
-  const EditableText = ({
-    value,
-    onChange,
-    className = '',
-    placeholder = '',
-    style = {},
-    multiline = false,
-  }: {
-    value: string;
-    onChange: (val: string) => void;
-    className?: string;
-    placeholder?: string;
-    style?: React.CSSProperties;
-    multiline?: boolean;
-  }) => {
-    if (!isEditingEnabled) {
-      return (
-        <span className={`whitespace-normal break-words leading-tight block ${className}`} style={style}>
-          {value || ''}
-        </span>
-      );
-    }
-
-    if (multiline) {
-      const valStr = value || '';
-      const estimatedRows = Math.max(1, Math.min(5, Math.ceil(valStr.length / 32)));
-      return (
-        <textarea
-          value={valStr}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={estimatedRows}
-          className={`bg-transparent outline-none focus:bg-amber-50 hover:bg-slate-50 transition-colors w-full resize-none break-words leading-tight ${className}`}
-          style={{ color: 'inherit', font: 'inherit', ...style }}
-        />
-      );
-    }
-
-    return (
-      <input
-        type="text"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`bg-transparent outline-none focus:bg-amber-50 hover:bg-slate-50 transition-colors w-full ${className}`}
-        style={{ color: 'inherit', font: 'inherit', ...style }}
-      />
-    );
-  };
-
   // Pre-calculate sub-entries and group by station for vertical merging
   const stationGroups = React.useMemo(() => {
     const groups: {
@@ -474,14 +424,15 @@ export const ReportPDFPreview: React.FC<Props> = ({
   const hasY3 = items.some((i) => (i.y3 || '').trim() !== '');
 
   return (
-    <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto">
-      {/* Paper Container matching screenshot proportions */}
-      <div
-        id={containerId || `pdf-paper-${reportData.depotCode}`}
-        data-station={reportData.depotCode}
-        style={containerStyle}
-        className="report-paper-sheet bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text"
-      >
+    <EditingContext.Provider value={isEditingEnabled}>
+      <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto print:p-0 print:m-0 print:overflow-visible print:bg-white">
+        {/* Paper Container matching screenshot proportions */}
+        <div
+          id={containerId || `pdf-paper-${reportData.depotCode}`}
+          data-station={reportData.depotCode}
+          style={containerStyle}
+          className="report-paper-sheet bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text print:shadow-none print:border-none print:max-w-none print:overflow-visible"
+        >
         {/* --- HEADER SECTION --- */}
         <div style={headerStyle} className="text-center mb-5 relative z-10">
           <div className="font-bold text-center tracking-wide" style={{ fontSize: `${fineTuneSettings.headerTitleSize}px` }}>
@@ -957,7 +908,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     {isEditingEnabled && (
                       <button
                         type="button"
-                        onClick={() => onOpenSignatureModal?.('preparedBy')}
+                        onClick={() => onOpenSignatureModal?.('preparedBy', reportData.depotCode)}
                         className="no-print text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
                         title="手簽或上傳簽名樣式"
                       >
@@ -967,7 +918,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     )}
                   </div>
                   <div
-                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('preparedBy')}
+                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('preparedBy', reportData.depotCode)}
                     className={`h-12 my-1 flex items-center justify-center transition-all ${
                       isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
                     }`}
@@ -996,7 +947,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     {isEditingEnabled && (
                       <button
                         type="button"
-                        onClick={() => onOpenSignatureModal?.('verifiedBy')}
+                        onClick={() => onOpenSignatureModal?.('verifiedBy', reportData.depotCode)}
                         className="no-print text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
                         title="手簽或上傳簽名樣式"
                       >
@@ -1006,7 +957,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     )}
                   </div>
                   <div
-                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('verifiedBy')}
+                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('verifiedBy', reportData.depotCode)}
                     className={`h-12 my-1 flex items-center justify-center transition-all ${
                       isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
                     }`}
@@ -1035,7 +986,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     {isEditingEnabled && (
                       <button
                         type="button"
-                        onClick={() => onOpenSignatureModal?.('endorsedBy')}
+                        onClick={() => onOpenSignatureModal?.('endorsedBy', reportData.depotCode)}
                         className="no-print text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
                         title="手簽或上傳簽名樣式"
                       >
@@ -1045,7 +996,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     )}
                   </div>
                   <div
-                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('endorsedBy')}
+                    onClick={() => isEditingEnabled && onOpenSignatureModal?.('endorsedBy', reportData.depotCode)}
                     className={`h-12 my-1 flex items-center justify-center transition-all ${
                       isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
                     }`}
@@ -1281,5 +1232,6 @@ export const ReportPDFPreview: React.FC<Props> = ({
         />
       )}
     </div>
+  </EditingContext.Provider>
   );
 };

@@ -1,8 +1,35 @@
 @import "tailwindcss";
 
+/* Hide scrollbars on all textareas and inputs across browsers */
+textarea {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  resize: none !important;
+}
+textarea::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 @layer utilities {
   /* Print Optimization Styles */
   @media print {
+    /* Completely hide all scrollbars during print */
+    * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    html, body, #root, main, div, table, tr, td, th {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+
     /* Hide all non-printable UI elements */
     .no-print,
     header,
@@ -25,6 +52,7 @@
       padding: 0 !important;
       width: 100% !important;
       height: auto !important;
+      overflow: visible !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
@@ -36,33 +64,32 @@
       margin: 0 !important;
       width: 100% !important;
       background: #ffffff !important;
+      overflow: visible !important;
     }
 
     /* Center and format report canvas - Strictly fit 1 page A4 landscape (height: 198mm) */
     #pdf-report-canvas,
-    .station-pdf-page {
+    .station-pdf-page,
+    .report-paper-sheet {
       box-shadow: none !important;
       border: none !important;
       width: 100% !important;
       max-width: 100% !important;
-      height: 198mm !important;
-      max-height: 198mm !important;
       box-sizing: border-box !important;
       overflow: hidden !important;
+      scrollbar-width: none !important;
       margin: 0 auto !important;
-      padding: 3mm 4mm !important;
+      padding: 2mm 3mm !important;
       background: #ffffff !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       page-break-after: always !important;
       break-after: page !important;
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: space-between !important;
     }
 
     .station-pdf-page:last-child,
-    #pdf-report-canvas:last-child {
+    #pdf-report-canvas:last-child,
+    .report-paper-sheet:last-child {
       page-break-after: auto !important;
       break-after: auto !important;
     }
@@ -88,6 +115,15 @@
       outline: none !important;
       resize: none !important;
       box-shadow: none !important;
+      overflow: hidden !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    input::-webkit-scrollbar,
+    textarea::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
   }
 }

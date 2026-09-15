@@ -17,6 +17,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   role: SignatoryRole;
+  stationCode?: string;
   currentSignature?: string;
   onSaveSignature: (role: SignatoryRole, signatureDataUrl: string, applyToAllStations: boolean) => void;
   onRemoveSignature: (role: SignatoryRole, applyToAllStations: boolean) => void;
@@ -32,12 +33,13 @@ export const SignatureModal: React.FC<Props> = ({
   isOpen,
   onClose,
   role,
+  stationCode,
   currentSignature,
   onSaveSignature,
   onRemoveSignature,
 }) => {
   const [activeTab, setActiveTab] = useState<'draw' | 'upload'>('draw');
-  const [applyToAll, setApplyToAll] = useState<boolean>(true);
+  const [applyToAll, setApplyToAll] = useState<boolean>(false);
   const [penColor, setPenColor] = useState<string>('#0f172a');
   const [strokeWidth, setStrokeWidth] = useState<number>(2.5);
   const [hasDrawn, setHasDrawn] = useState<boolean>(false);
@@ -53,6 +55,7 @@ export const SignatureModal: React.FC<Props> = ({
     if (!isOpen) return;
     setHasDrawn(false);
     setUploadedImage(null);
+    setApplyToAll(false); // Default false: signatures must be separate per station
 
     // Give modal DOM a tick to layout before sizing canvas
     const timer = setTimeout(() => {
@@ -239,11 +242,16 @@ export const SignatureModal: React.FC<Props> = ({
               <PenTool className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
                 <span>{roleInfo.en} 電子簽名設定</span>
                 <span className="text-xs px-2 py-0.5 font-normal rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                   {roleInfo.zh}
                 </span>
+                {stationCode && (
+                  <span className="text-xs px-2 py-0.5 font-bold rounded bg-amber-50 text-amber-800 border border-amber-300">
+                    站點: {stationCode}
+                  </span>
+                )}
               </h3>
               <p className="text-xs text-slate-500">支援即時手寫觸控簽署或上傳清晰印章圖檔</p>
             </div>
@@ -458,10 +466,14 @@ export const SignatureModal: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Apply to all stations option */}
+          {/* Apply to all stations option (Default separate per user requirement) */}
           <div
             onClick={() => setApplyToAll(!applyToAll)}
-            className="p-3 rounded-xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors select-none"
+            className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-colors select-none ${
+              applyToAll
+                ? 'border-indigo-300 bg-indigo-50/70'
+                : 'border-slate-200 bg-slate-50/80 hover:bg-slate-100/70'
+            }`}
           >
             <div className="flex items-center gap-2.5">
               {applyToAll ? (
@@ -471,10 +483,14 @@ export const SignatureModal: React.FC<Props> = ({
               )}
               <div>
                 <span className="text-xs font-bold text-slate-900 block">
-                  同時將此簽名套用至所有車站 ({roleInfo.en})
+                  {applyToAll
+                    ? `⚠️ 將此簽名同時套用至所有車站 (${roleInfo.en})`
+                    : `✓ 各站簽名獨立分開 (僅套用至 ${stationCode || '當前站點'})`}
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  勾選後，匯出全部 20 站 PDF 時均會自動帶入此簽名，無需逐站手簽
+                  {applyToAll
+                    ? '已啟用同步：將同時更新全部 20 站的簽名'
+                    : '已啟用獨立簽名 (預設)，各站點簽名互不影響、各自獨立儲存'}
                 </span>
               </div>
             </div>
@@ -496,7 +512,7 @@ export const SignatureModal: React.FC<Props> = ({
             className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
           >
             <Check className="w-4 h-4" />
-            <span>儲存並套用簽名</span>
+            <span>儲存簽名 ({applyToAll ? '套用全部車站' : `僅套用至 ${stationCode || '當前站'}`})</span>
           </button>
         </div>
       </div>

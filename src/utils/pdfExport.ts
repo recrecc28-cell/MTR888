@@ -8,26 +8,78 @@ import { jsPDF } from 'jspdf';
  * - Pre-normalizes images for clean rendering
  */
 function cleanClonedDocument(clonedDoc: Document | HTMLElement): void {
-  // Remove buttons, edit tooltips, and interactive hints
+  // 1. Remove non-printable elements (buttons, popups, tooltips)
   const noPrints = clonedDoc.querySelectorAll('.no-print');
   noPrints.forEach((el) => el.remove());
 
-  // Set input and textarea values as attributes so html2canvas renders typed text faithfully
-  const formInputs = clonedDoc.querySelectorAll('input');
-  formInputs.forEach((input: any) => {
-    input.setAttribute('value', input.value || '');
-  });
-
+  // 2. Convert all textareas to plain <div> elements
+  // This completely eliminates native textarea scrollbars, stepper controls, and `<>` glyphs
   const textareas = clonedDoc.querySelectorAll('textarea');
   textareas.forEach((ta: any) => {
-    ta.textContent = ta.value || '';
+    const textVal = ta.value || ta.textContent || '';
+    const div = document.createElement('div');
+    div.textContent = textVal;
+    div.className = ta.className || '';
+    div.setAttribute('style', ta.getAttribute('style') || '');
+    // Ensure multiline wrapping into 2 lines if long, with zero scrollbars
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordBreak = 'break-word';
+    div.style.overflow = 'hidden';
+    div.style.resize = 'none';
+    div.style.scrollbarWidth = 'none';
+    div.style.setProperty('-ms-overflow-style', 'none');
+    div.style.display = 'block';
+    div.style.width = '100%';
+    div.style.lineHeight = '1.25';
+    div.style.border = 'none';
+    div.style.background = 'transparent';
+    div.style.padding = '0';
+    div.style.margin = '0';
+    ta.parentNode?.replaceChild(div, ta);
   });
 
-  // Ensure image tags do not throw CORS or break rendering
+  // 3. Convert all input elements to clean <span> so no input borders, arrows, or native scrollbars render
+  const formInputs = clonedDoc.querySelectorAll('input');
+  formInputs.forEach((inp: any) => {
+    const textVal = inp.value || inp.getAttribute('value') || '';
+    const span = document.createElement('span');
+    span.textContent = textVal;
+    span.className = inp.className || '';
+    span.setAttribute('style', inp.getAttribute('style') || '');
+    span.style.whiteSpace = 'pre-wrap';
+    span.style.wordBreak = 'break-word';
+    span.style.overflow = 'hidden';
+    span.style.border = 'none';
+    span.style.background = 'transparent';
+    span.style.outline = 'none';
+    span.style.display = 'inline-block';
+    span.style.width = '100%';
+    inp.parentNode?.replaceChild(span, inp);
+  });
+
+  // 4. Ensure image tags do not throw CORS or break rendering
   const images = clonedDoc.querySelectorAll('img');
   images.forEach((img: any) => {
     img.crossOrigin = 'anonymous';
     img.loading = 'eager';
+  });
+
+  // 5. Hide all scrollbars across all elements in the cloned document
+  const allEls = clonedDoc.querySelectorAll('*');
+  allEls.forEach((el: any) => {
+    if (el.style) {
+      el.style.scrollbarWidth = 'none';
+      el.style.setProperty('-ms-overflow-style', 'none');
+      if (el.style.overflow === 'auto' || el.style.overflow === 'scroll') {
+        el.style.overflow = 'hidden';
+      }
+      if (el.style.overflowX === 'auto' || el.style.overflowX === 'scroll') {
+        el.style.overflowX = 'hidden';
+      }
+      if (el.style.overflowY === 'auto' || el.style.overflowY === 'scroll') {
+        el.style.overflowY = 'hidden';
+      }
+    }
   });
 }
 

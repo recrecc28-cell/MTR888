@@ -234,9 +234,12 @@ export default function App() {
   const [isPptOpen, setIsPptOpen] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [activeSignatureRole, setActiveSignatureRole] = useState<SignatoryRole>('preparedBy');
+  const [activeSignatureStation, setActiveSignatureStation] = useState<string>('');
 
-  const handleOpenSignatureModal = (role: SignatoryRole) => {
+  const handleOpenSignatureModal = (role: SignatoryRole, stationCode?: string) => {
     setActiveSignatureRole(role);
+    const target = stationCode || (currentDepot !== 'ALL' ? currentDepot : '');
+    setActiveSignatureStation(target);
     setIsSignatureModalOpen(true);
   };
 
@@ -251,6 +254,13 @@ export default function App() {
         : role === 'verifiedBy'
         ? 'verifiedBySig'
         : 'endorsedBySig';
+
+    const targetStation =
+      activeSignatureStation && activeSignatureStation !== 'ALL'
+        ? activeSignatureStation
+        : currentDepot !== 'ALL'
+        ? currentDepot
+        : stationsWithData[0] || ALL_MTR_LOCATIONS[0].code;
 
     setReportsByDepot((prev) => {
       const next = { ...prev };
@@ -268,8 +278,8 @@ export default function App() {
           };
         });
       } else {
-        const curr = next[currentDepot] || createEmptyReport(currentDepot);
-        next[currentDepot] = {
+        const curr = next[targetStation] || createEmptyReport(targetStation);
+        next[targetStation] = {
           ...curr,
           signatories: {
             ...curr.signatories,
@@ -288,7 +298,7 @@ export default function App() {
         ? 'Verified By'
         : 'Endorsed By';
     showToast(
-      `已儲存 ${roleName} 簽名 (${applyToAllStations ? '已套用至全部車站' : currentDepot})！`
+      `已儲存 ${roleName} 簽名 (${applyToAllStations ? '已套用至全部車站' : `僅套用至 ${targetStation}`})！`
     );
   };
 
@@ -299,6 +309,13 @@ export default function App() {
         : role === 'verifiedBy'
         ? 'verifiedBySig'
         : 'endorsedBySig';
+
+    const targetStation =
+      activeSignatureStation && activeSignatureStation !== 'ALL'
+        ? activeSignatureStation
+        : currentDepot !== 'ALL'
+        ? currentDepot
+        : stationsWithData[0] || ALL_MTR_LOCATIONS[0].code;
 
     setReportsByDepot((prev) => {
       const next = { ...prev };
@@ -314,11 +331,11 @@ export default function App() {
             };
           }
         });
-      } else if (next[currentDepot]?.signatories) {
-        next[currentDepot] = {
-          ...next[currentDepot],
+      } else if (next[targetStation]?.signatories) {
+        next[targetStation] = {
+          ...next[targetStation],
           signatories: {
-            ...next[currentDepot].signatories,
+            ...next[targetStation].signatories,
             [sigKey]: '',
           },
         };
@@ -326,7 +343,7 @@ export default function App() {
       return next;
     });
 
-    showToast(`已清除簽名！`);
+    showToast(`已清除簽名 (${applyToAllStations ? '全部車站' : targetStation})！`);
   };
 
   const handleOpenUploadModal = () => {
@@ -1180,13 +1197,21 @@ export default function App() {
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
         role={activeSignatureRole}
-        currentSignature={
-          activeSignatureRole === 'preparedBy'
-            ? reportData.signatories.preparedBySig
+        stationCode={activeSignatureStation || (currentDepot !== 'ALL' ? currentDepot : undefined)}
+        currentSignature={(() => {
+          const targetStn =
+            activeSignatureStation && activeSignatureStation !== 'ALL'
+              ? activeSignatureStation
+              : currentDepot !== 'ALL'
+              ? currentDepot
+              : undefined;
+          const stnRep = targetStn ? reportsByDepot[targetStn] : reportData;
+          return activeSignatureRole === 'preparedBy'
+            ? stnRep?.signatories?.preparedBySig
             : activeSignatureRole === 'verifiedBy'
-            ? reportData.signatories.verifiedBySig
-            : reportData.signatories.endorsedBySig
-        }
+            ? stnRep?.signatories?.verifiedBySig
+            : stnRep?.signatories?.endorsedBySig;
+        })()}
         onSaveSignature={handleSaveSignature}
         onRemoveSignature={handleRemoveSignature}
       />
