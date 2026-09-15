@@ -10,7 +10,11 @@ interface Props {
   onUpdateReportData?: (newData: MaintenanceReportData) => void;
   isEditingEnabled?: boolean;
   onOpenSignatureModal?: (role: 'preparedBy' | 'verifiedBy' | 'endorsedBy') => void;
-  onSyncDateToAllStations?: (dateVal: string, syncAllThreeRoles: boolean) => void;
+  onSyncDateToAllStations?: (
+    dateVal: string,
+    syncAllThreeRoles: boolean,
+    targetRole?: 'preparedBy' | 'verifiedBy' | 'endorsedBy'
+  ) => void;
   containerId?: string;
 }
 
@@ -343,7 +347,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
     });
 
     if (syncToAllStations && onSyncDateToAllStations) {
-      onSyncDateToAllStations(formattedDate, syncToAllSignatories);
+      onSyncDateToAllStations(formattedDate, syncToAllSignatories, role);
     }
 
     setActiveDatePicker(null);

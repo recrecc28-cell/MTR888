@@ -707,19 +707,30 @@ export default function App() {
     window.print();
   };
 
-  const handleSyncDateToAllStations = (dateVal: string, syncAllThreeRoles: boolean) => {
+  const handleSyncDateToAllStations = (
+    dateVal: string,
+    syncAllThreeRoles: boolean,
+    targetRole?: 'preparedBy' | 'verifiedBy' | 'endorsedBy'
+  ) => {
     setReportsByDepot((prev) => {
       const nextReports: Record<string, MaintenanceReportData> = {};
       Object.keys(prev).forEach((code) => {
         const rep = prev[code];
         if (!rep) return;
+        const targetRoleField = targetRole ? (`${targetRole}Date` as 'preparedByDate' | 'verifiedByDate' | 'endorsedByDate') : 'preparedByDate';
         nextReports[code] = {
           ...rep,
           signatories: {
             ...rep.signatories,
-            preparedByDate: dateVal,
-            verifiedByDate: syncAllThreeRoles ? dateVal : rep.signatories.verifiedByDate,
-            endorsedByDate: syncAllThreeRoles ? dateVal : rep.signatories.endorsedByDate,
+            ...(syncAllThreeRoles
+              ? {
+                  preparedByDate: dateVal,
+                  verifiedByDate: dateVal,
+                  endorsedByDate: dateVal,
+                }
+              : {
+                  [targetRoleField]: dateVal,
+                }),
           },
           updatedAt: new Date().toISOString(),
         };

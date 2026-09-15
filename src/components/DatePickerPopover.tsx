@@ -82,7 +82,7 @@ export const DatePickerPopover: React.FC<DatePickerPopoverProps> = ({
 
   const [viewYear, setViewYear] = useState<number>(validInitial.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(validInitial.getMonth()); // 0 - 11
-  const [syncToAllSignatories, setSyncToAllSignatories] = useState<boolean>(true);
+  const [syncToAllSignatories, setSyncToAllSignatories] = useState<boolean>(false);
   const [syncToAllStations, setSyncToAllStations] = useState<boolean>(false);
 
   // Update calendar view when modal opens
@@ -376,7 +376,7 @@ export const DatePickerPopover: React.FC<DatePickerPopoverProps> = ({
         </div>
 
         {/* Synchronization toggles for batch signing */}
-        <div className="px-3 py-2 bg-amber-50/50 border-t border-amber-200/60 text-[11px] space-y-1 text-slate-600">
+        <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 text-[11px] space-y-1 text-slate-600">
           <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900">
             <input
               type="checkbox"
@@ -384,7 +384,7 @@ export const DatePickerPopover: React.FC<DatePickerPopoverProps> = ({
               onChange={(e) => setSyncToAllSignatories(e.target.checked)}
               className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5 accent-sky-600 cursor-pointer"
             />
-            <span>同步填入此站全部 3 個簽名日期 (Prepared / Verified / Endorsed)</span>
+            <span>同步套用至其餘 2 位簽名人（預設未勾選，3人可選不同日期）</span>
           </label>
 
           <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900">
