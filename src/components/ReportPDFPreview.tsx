@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MaintenanceReportData, FineTuneSettings, MaintenanceItem, SubWoEntry } from '../types';
-import { Plus, Trash2, PenTool } from 'lucide-react';
+import { Plus, Trash2, PenTool, Calendar as CalendarIcon } from 'lucide-react';
 import { formatWorkDescriptionNeat } from '../utils/excelHelper';
+import { DatePickerPopover, normalizeToStandardDate } from './DatePickerPopover';
 
 interface Props {
   reportData: MaintenanceReportData;
@@ -9,6 +10,7 @@ interface Props {
   onUpdateReportData?: (newData: MaintenanceReportData) => void;
   isEditingEnabled?: boolean;
   onOpenSignatureModal?: (role: 'preparedBy' | 'verifiedBy' | 'endorsedBy') => void;
+  onSyncDateToAllStations?: (dateVal: string, syncAllThreeRoles: boolean) => void;
   containerId?: string;
 }
 
@@ -18,6 +20,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
   onUpdateReportData = (_newData: MaintenanceReportData) => {},
   isEditingEnabled = true,
   onOpenSignatureModal,
+  onSyncDateToAllStations,
   containerId,
 }) => {
   const { items, signatories } = reportData;
@@ -302,25 +305,95 @@ export const ReportPDFPreview: React.FC<Props> = ({
     marginTop: `${effectiveSignatoryMarginTop}px`,
   };
 
-  // Editable inline text component
+  // State for active Date Picker popover
+  const [activeDatePicker, setActiveDatePicker] = useState<{
+    role: 'preparedBy' | 'verifiedBy' | 'endorsedBy';
+    label: string;
+    currentDate: string;
+  } | null>(null);
+
+  const handleSelectSignatoryDate = (
+    formattedDate: string,
+    syncToAllSignatories: boolean,
+    syncToAllStations: boolean
+  ) => {
+    if (!activeDatePicker) return;
+    const role = activeDatePicker.role;
+    const roleDateField = `${role}Date` as 'preparedByDate' | 'verifiedByDate' | 'endorsedByDate';
+
+    let updatedSignatories = { ...signatories };
+    if (syncToAllSignatories) {
+      updatedSignatories = {
+        ...updatedSignatories,
+        preparedByDate: formattedDate,
+        verifiedByDate: formattedDate,
+        endorsedByDate: formattedDate,
+      };
+    } else {
+      updatedSignatories = {
+        ...updatedSignatories,
+        [roleDateField]: formattedDate,
+      };
+    }
+
+    onUpdateReportData({
+      ...reportData,
+      signatories: updatedSignatories,
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (syncToAllStations && onSyncDateToAllStations) {
+      onSyncDateToAllStations(formattedDate, syncToAllSignatories);
+    }
+
+    setActiveDatePicker(null);
+  };
+
+  // Dynamic column widths reflecting user request:
+  // WORK DESCRIPTION lengthened, PM W/O shortened
+  const colStation = `${fineTuneSettings.colWidthStation ?? 6.5}%`;
+  const colWorkDesc = `${fineTuneSettings.colWidthWorkDesc ?? 40}%`;
+  const colPmWo = `${fineTuneSettings.colWidthPmWo ?? 9}%`;
+  const colQty = `${fineTuneSettings.colWidthQty ?? 4.5}%`;
+  const colTradeGroup = `${fineTuneSettings.colWidthTradeGroup ?? 40}%`;
+  const colFreq = `${((fineTuneSettings.colWidthTradeGroup ?? 40) / 8).toFixed(4)}%`;
+
+  // Editable inline text component with multiline support for WORK DESCRIPTION
   const EditableText = ({
     value,
     onChange,
     className = '',
     placeholder = '',
     style = {},
+    multiline = false,
   }: {
     value: string;
     onChange: (val: string) => void;
     className?: string;
     placeholder?: string;
     style?: React.CSSProperties;
+    multiline?: boolean;
   }) => {
     if (!isEditingEnabled) {
       return (
-        <span className={`whitespace-pre-line ${className}`} style={style}>
+        <span className={`whitespace-normal break-words leading-tight block ${className}`} style={style}>
           {value || ''}
         </span>
+      );
+    }
+
+    if (multiline) {
+      const valStr = value || '';
+      const estimatedRows = Math.max(1, Math.min(5, Math.ceil(valStr.length / 32)));
+      return (
+        <textarea
+          value={valStr}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={estimatedRows}
+          className={`bg-transparent outline-none focus:bg-amber-50 hover:bg-slate-50 transition-colors w-full resize-none break-words leading-tight ${className}`}
+          style={{ color: 'inherit', font: 'inherit', ...style }}
+        />
       );
     }
 
@@ -422,35 +495,35 @@ export const ReportPDFPreview: React.FC<Props> = ({
               {/* Row 1 Header */}
               <tr className="text-center font-bold" style={{ fontSize: `${effectiveHeaderSize}px` }}>
                 <th
-                  style={{ ...borderStyle, width: '8%' }}
+                  style={{ ...borderStyle, width: colStation }}
                   rowSpan={3}
                   className="px-1 py-1 text-center font-bold align-middle"
                 >
                   STATION
                 </th>
                 <th
-                  style={{ ...borderStyle, width: '28%' }}
+                  style={{ ...borderStyle, width: colWorkDesc }}
                   rowSpan={3}
                   className="px-2 py-1 text-center font-bold align-middle"
                 >
                   WORK DESCRIPTION
                 </th>
                 <th
-                  style={{ ...borderStyle, width: '14%' }}
+                  style={{ ...borderStyle, width: colPmWo }}
                   rowSpan={3}
                   className="px-1 py-1 text-center font-bold align-middle"
                 >
                   PM W/O
                 </th>
                 <th
-                  style={{ ...borderStyle, width: '5%' }}
+                  style={{ ...borderStyle, width: colQty }}
                   rowSpan={3}
                   className="px-1 py-1 text-center font-bold align-middle"
                 >
                   QTY
                 </th>
                 <th
-                  style={{ ...borderStyle, width: '45%' }}
+                  style={{ ...borderStyle, width: colTradeGroup }}
                   colSpan={8}
                   className="px-1 py-0.5 text-center font-bold align-middle uppercase"
                 >
@@ -462,7 +535,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
               {/* Row 2 Sub-Header: ECS */}
               <tr className="text-center font-bold" style={{ fontSize: `${effectiveHeaderSize}px` }}>
                 <th
-                  style={{ ...borderStyle, width: '45%' }}
+                  style={{ ...borderStyle, width: colTradeGroup }}
                   colSpan={8}
                   className="px-1 py-0.5 text-center font-bold align-middle uppercase"
                 >
@@ -473,14 +546,14 @@ export const ReportPDFPreview: React.FC<Props> = ({
 
               {/* Row 3 Sub-Headers for TRADE/ECS frequencies: M, 3M, 4M, 6M, Y, 18M, 2Y, 3Y */}
               <tr className="text-center font-bold" style={{ fontSize: `${fineTuneSettings.tableHeaderSize}px` }}>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">M</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">3M</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">4M</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">6M</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">Y</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">18M</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">2Y</th>
-                <th style={{ ...borderStyle, width: '5.625%' }} className="py-1 px-0.5 text-center whitespace-nowrap">3Y</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">M</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">3M</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">4M</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">6M</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">Y</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">18M</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">2Y</th>
+                <th style={{ ...borderStyle, width: colFreq }} className="py-1 px-0.5 text-center whitespace-nowrap">3Y</th>
                 {isEditingEnabled && <th className="no-print w-10 border-0 bg-transparent"></th>}
               </tr>
             </thead>
@@ -568,32 +641,35 @@ export const ReportPDFPreview: React.FC<Props> = ({
                           {isFirstSubOfItem && isFirstOfDescGroup && (
                             <td
                               rowSpan={shouldMergeDesc ? descGroupRowSpan : subs.length}
-                              style={{ ...borderStyle, ...cellPaddingStyle }}
-                              className="align-middle pl-2 font-sans"
+                              style={{ ...borderStyle, ...cellPaddingStyle, width: colWorkDesc }}
+                              className="align-middle px-2 font-sans break-words whitespace-normal leading-tight"
                             >
                               <EditableText
-                                value={formatWorkDescriptionNeat(item.workDescription)}
-                                onChange={(val) => handleItemChange(item.id, 'workDescription', formatWorkDescriptionNeat(val))}
+                                value={item.workDescription}
+                                onChange={(val) => handleItemChange(item.id, 'workDescription', val)}
                                 className="text-left font-normal"
+                                multiline={true}
+                                placeholder="請輸入設備工作說明 (Work Description)"
                               />
                             </td>
                           )}
 
                           {/* PM W/O: Each work order number in its own sub row */}
                           <td
-                            style={{ ...borderStyle, ...cellPaddingStyle }}
+                            style={{ ...borderStyle, ...cellPaddingStyle, width: colPmWo }}
                             className="text-center align-middle font-sans font-mono"
                           >
                             <EditableText
                               value={sub.pmWo}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'pmWo', val)}
-                              className="text-center font-mono text-[11px]"
+                              className="text-center font-mono text-[11px] tabular-nums"
+                              placeholder="工單號"
                             />
                           </td>
 
                           {/* QTY: QTY=1 on every row */}
                           <td
-                            style={{ ...borderStyle, ...cellPaddingStyle }}
+                            style={{ ...borderStyle, ...cellPaddingStyle, width: colQty }}
                             className="text-center align-middle font-sans"
                           >
                             <EditableText
@@ -604,56 +680,56 @@ export const ReportPDFPreview: React.FC<Props> = ({
                           </td>
 
                           {/* FREQUENCIES: M, 3M, 4M, 6M, Y, 18M, 2Y, 3Y */}
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.m || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'm', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.m3 || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'm3', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.m4 || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'm4', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.m6 || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'm6', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.y || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'y', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5 font-bold">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5 font-bold">
                             <EditableText
                               value={sub.m18 || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'm18', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans font-bold"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.y2 || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'y2', val)}
                               className="text-center whitespace-nowrap min-w-0 font-sans"
                             />
                           </td>
-                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle whitespace-nowrap px-0.5">
+                          <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle whitespace-nowrap px-0.5">
                             <EditableText
                               value={sub.y3 || ''}
                               onChange={(val) => handleSubEntryChange(item.id, subIndex, 'y3', val)}
@@ -717,7 +793,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 <td style={{ ...borderStyle, ...cellPaddingStyle }} className="text-center align-middle font-bold">
                   {/* Empty in screenshot */}
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.mTotal}
                     onChange={(val) =>
@@ -729,7 +805,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.m3Total}
                     onChange={(val) =>
@@ -741,7 +817,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.m4Total}
                     onChange={(val) =>
@@ -753,7 +829,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.m6Total}
                     onChange={(val) =>
@@ -765,7 +841,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.yTotal}
                     onChange={(val) =>
@@ -777,7 +853,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.m18Total || ''}
                     onChange={(val) =>
@@ -789,7 +865,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.y2Total}
                     onChange={(val) =>
@@ -801,7 +877,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
-                <td style={{ ...borderStyle, ...cellPaddingStyle, width: '5.625%' }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
+                <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
                     value={reportData.overallTotals.y3Total || ''}
                     onChange={(val) =>
@@ -1004,54 +1080,146 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 </td>
               </tr>
 
-              {/* Row 3: Date */}
+              {/* Row 3: Date - User Rule: DATE 位置不能輸入字，做一個日期選取功能，統一日期格式 YYYY-MM-DD */}
               <tr>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
                     <span className="whitespace-nowrap">Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                    <EditableText
-                      value={signatories.preparedByDate}
-                      onChange={(val) =>
-                        onUpdateReportData({
-                          ...reportData,
-                          signatories: { ...signatories, preparedByDate: val },
+                    <div
+                      onClick={() =>
+                        isEditingEnabled &&
+                        setActiveDatePicker({
+                          role: 'preparedBy',
+                          label: 'Prepared By 日期',
+                          currentDate: signatories.preparedByDate,
                         })
                       }
-                      className="ml-1"
-                      placeholder="YYYY-MM-DD"
-                    />
+                      className={`flex items-center justify-between border rounded px-1.5 py-0.5 text-xs transition-all flex-1 min-w-0 ${
+                        isEditingEnabled
+                          ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/50 bg-white border-slate-200'
+                          : 'border-transparent'
+                      }`}
+                      title={isEditingEnabled ? '點擊選取統一格式日期 (YYYY-MM-DD)' : ''}
+                    >
+                      <input
+                        type="text"
+                        readOnly={true}
+                        value={normalizeToStandardDate(signatories.preparedByDate)}
+                        placeholder={isEditingEnabled ? '選擇日期' : ''}
+                        className="bg-transparent outline-none cursor-pointer w-full text-left font-mono font-medium text-slate-800 pointer-events-none select-none"
+                      />
+                      {isEditingEnabled && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDatePicker({
+                              role: 'preparedBy',
+                              label: 'Prepared By 日期',
+                              currentDate: signatories.preparedByDate,
+                            });
+                          }}
+                          className="no-print p-0.5 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded border border-slate-300 bg-slate-50 transition-colors ml-1 shrink-0"
+                          title="開啟日曆選取器 (統一格式 YYYY-MM-DD)"
+                        >
+                          <CalendarIcon className="w-3.5 h-3.5 text-slate-600" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </td>
+
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
                     <span className="whitespace-nowrap">Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                    <EditableText
-                      value={signatories.verifiedByDate}
-                      onChange={(val) =>
-                        onUpdateReportData({
-                          ...reportData,
-                          signatories: { ...signatories, verifiedByDate: val },
+                    <div
+                      onClick={() =>
+                        isEditingEnabled &&
+                        setActiveDatePicker({
+                          role: 'verifiedBy',
+                          label: 'Verified By 日期',
+                          currentDate: signatories.verifiedByDate,
                         })
                       }
-                      className="ml-1"
-                      placeholder="YYYY-MM-DD"
-                    />
+                      className={`flex items-center justify-between border rounded px-1.5 py-0.5 text-xs transition-all flex-1 min-w-0 ${
+                        isEditingEnabled
+                          ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/50 bg-white border-slate-200'
+                          : 'border-transparent'
+                      }`}
+                      title={isEditingEnabled ? '點擊選取統一格式日期 (YYYY-MM-DD)' : ''}
+                    >
+                      <input
+                        type="text"
+                        readOnly={true}
+                        value={normalizeToStandardDate(signatories.verifiedByDate)}
+                        placeholder={isEditingEnabled ? '選擇日期' : ''}
+                        className="bg-transparent outline-none cursor-pointer w-full text-left font-mono font-medium text-slate-800 pointer-events-none select-none"
+                      />
+                      {isEditingEnabled && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDatePicker({
+                              role: 'verifiedBy',
+                              label: 'Verified By 日期',
+                              currentDate: signatories.verifiedByDate,
+                            });
+                          }}
+                          className="no-print p-0.5 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded border border-slate-300 bg-slate-50 transition-colors ml-1 shrink-0"
+                          title="開啟日曆選取器 (統一格式 YYYY-MM-DD)"
+                        >
+                          <CalendarIcon className="w-3.5 h-3.5 text-slate-600" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </td>
+
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
                     <span className="whitespace-nowrap">Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
-                    <EditableText
-                      value={signatories.endorsedByDate}
-                      onChange={(val) =>
-                        onUpdateReportData({
-                          ...reportData,
-                          signatories: { ...signatories, endorsedByDate: val },
+                    <div
+                      onClick={() =>
+                        isEditingEnabled &&
+                        setActiveDatePicker({
+                          role: 'endorsedBy',
+                          label: 'Endorsed By 日期',
+                          currentDate: signatories.endorsedByDate,
                         })
                       }
-                      className="ml-1"
-                      placeholder="YYYY-MM-DD"
-                    />
+                      className={`flex items-center justify-between border rounded px-1.5 py-0.5 text-xs transition-all flex-1 min-w-0 ${
+                        isEditingEnabled
+                          ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/50 bg-white border-slate-200'
+                          : 'border-transparent'
+                      }`}
+                      title={isEditingEnabled ? '點擊選取統一格式日期 (YYYY-MM-DD)' : ''}
+                    >
+                      <input
+                        type="text"
+                        readOnly={true}
+                        value={normalizeToStandardDate(signatories.endorsedByDate)}
+                        placeholder={isEditingEnabled ? '選擇日期' : ''}
+                        className="bg-transparent outline-none cursor-pointer w-full text-left font-mono font-medium text-slate-800 pointer-events-none select-none"
+                      />
+                      {isEditingEnabled && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDatePicker({
+                              role: 'endorsedBy',
+                              label: 'Endorsed By 日期',
+                              currentDate: signatories.endorsedByDate,
+                            });
+                          }}
+                          className="no-print p-0.5 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded border border-slate-300 bg-slate-50 transition-colors ml-1 shrink-0"
+                          title="開啟日曆選取器 (統一格式 YYYY-MM-DD)"
+                        >
+                          <CalendarIcon className="w-3.5 h-3.5 text-slate-600" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -1059,6 +1227,17 @@ export const ReportPDFPreview: React.FC<Props> = ({
           </table>
         </div>
       </div>
+
+      {/* Interactive Date Picker Popover */}
+      {isEditingEnabled && activeDatePicker && (
+        <DatePickerPopover
+          isOpen={true}
+          onClose={() => setActiveDatePicker(null)}
+          selectedDate={activeDatePicker.currentDate}
+          roleName={activeDatePicker.label}
+          onSelectDate={handleSelectSignatoryDate}
+        />
+      )}
     </div>
   );
 };

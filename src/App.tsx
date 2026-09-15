@@ -649,6 +649,28 @@ export default function App() {
     window.print();
   };
 
+  const handleSyncDateToAllStations = (dateVal: string, syncAllThreeRoles: boolean) => {
+    setReportsByDepot((prev) => {
+      const nextReports: Record<string, MaintenanceReportData> = {};
+      Object.keys(prev).forEach((code) => {
+        const rep = prev[code];
+        if (!rep) return;
+        nextReports[code] = {
+          ...rep,
+          signatories: {
+            ...rep.signatories,
+            preparedByDate: dateVal,
+            verifiedByDate: syncAllThreeRoles ? dateVal : rep.signatories.verifiedByDate,
+            endorsedByDate: syncAllThreeRoles ? dateVal : rep.signatories.endorsedByDate,
+          },
+          updatedAt: new Date().toISOString(),
+        };
+      });
+      return nextReports;
+    });
+    showToast(`已將簽名日期 ${dateVal} 同步套用至全部站點！`);
+  };
+
   const handleLoadSampleLak = () => {
     if (
       window.confirm(
@@ -1023,6 +1045,7 @@ export default function App() {
                   }}
                   isEditingEnabled={true}
                   onOpenSignatureModal={handleOpenSignatureModal}
+                  onSyncDateToAllStations={handleSyncDateToAllStations}
                 />
               </div>
             );

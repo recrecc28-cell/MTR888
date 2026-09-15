@@ -111,10 +111,10 @@ export const defaultFineTuneSettings: FineTuneSettings = {
   tableBorderWidth: 1,
   tableBorderColor: '#000000',
   
-  colWidthStation: 7,
-  colWidthWorkDesc: 34,
-  colWidthPmWo: 12,
-  colWidthQty: 7,
+  colWidthStation: 6.5,
+  colWidthWorkDesc: 40,
+  colWidthPmWo: 9,
+  colWidthQty: 4.5,
   colWidthTradeGroup: 40,
   
   headerOffsetX: 0,

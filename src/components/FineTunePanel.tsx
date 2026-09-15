@@ -505,9 +505,9 @@ export const FineTunePanel: React.FC<Props> = ({
 
               <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px] text-slate-500">
                 <span>
-                  TRADE / ECS 組下包含 7 項週期 (M, 2M, 3M, 4M, 6M, Y, 2Y)，每單欄均分寬度為:{' '}
+                  TRADE / ECS 組下包含 8 項週期 (M, 3M, 4M, 6M, Y, 18M, 2Y, 3Y)，每單欄均分寬度為:{' '}
                   <strong className="text-amber-700 font-mono font-bold">
-                    {(settings.colWidthTradeGroup / 7).toFixed(2)}%
+                    {(settings.colWidthTradeGroup / 8).toFixed(2)}%
                   </strong>{' '}
                   (足夠完整顯示 100% 及相關百分比數據)
                 </span>
