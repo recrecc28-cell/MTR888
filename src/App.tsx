@@ -38,7 +38,6 @@ import {
   RotateCcw,
   Trash2,
   FileSpreadsheet,
-  ClipboardPaste,
   Layers,
   Download,
   FileCheck2,
@@ -876,8 +875,6 @@ export default function App() {
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
-        onExportExcelClick={handleExportCurrentScreenExcel}
-        onExportAllExcelClick={handleExportAllStationsExcel}
         isAllStationsMode={currentDepot === 'ALL'}
         onPrintClick={handlePrint}
         onOpenHelpClick={() => setIsHelpOpen(true)}
@@ -949,17 +946,6 @@ export default function App() {
 
               <span className="text-slate-300">‧</span>
 
-              {/* Direct Paste & Upload shortcuts for fast input */}
-              <button
-                type="button"
-                onClick={handleOpenPasteModal}
-                className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                title="直接貼上複製的表格或 Maximo 工單數據"
-              >
-                <ClipboardPaste className="w-3.5 h-3.5 text-emerald-600" />
-                <span>貼上資料 (Paste)</span>
-              </button>
-
               <button
                 type="button"
                 onClick={handleOpenUploadModal}
@@ -977,17 +963,6 @@ export default function App() {
             <span className="hidden xl:inline text-xs text-slate-500 font-mono mr-1">
               {reportData.reportMonthYear}
             </span>
-
-            {/* Download Screen Excel Button (用戶重要需求) */}
-            <button
-              type="button"
-              onClick={handleExportCurrentScreenExcel}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
-              title="將目前畫面上的報表內容下載為 Excel 試算表 (.xlsx)"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
-              <span>{currentDepot === 'ALL' ? '下載全部 EXCEL' : '下載 EXCEL'}</span>
-            </button>
 
             {/* Download All Stations Button */}
             {stationsWithData.length > 1 && (
