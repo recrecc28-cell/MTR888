@@ -241,8 +241,8 @@ export const ExcelUploadModal: React.FC<Props> = ({
           throw new Error('請先貼上資料內容');
         }
         parsedData = parsePastedText(pastedText, {
-          targetDepotCode: targetDepotCode.trim().toUpperCase() || 'AIR',
-          filterByDepot,
+          targetDepotCode: targetDepotCode.trim().toUpperCase() || 'ALL',
+          filterByDepot: targetDepotCode === 'ALL' ? false : filterByDepot,
           existingItems,
         });
         label = '貼上資料';
@@ -251,8 +251,8 @@ export const ExcelUploadModal: React.FC<Props> = ({
           throw new Error('請先選擇或拖放 Excel 檔案');
         }
         parsedData = await parseExcelFile(selectedFile, {
-          targetDepotCode: targetDepotCode.trim().toUpperCase() || 'AIR',
-          filterByDepot,
+          targetDepotCode: targetDepotCode.trim().toUpperCase() || 'ALL',
+          filterByDepot: targetDepotCode === 'ALL' ? false : filterByDepot,
           existingItems,
           selectedSheetName: selectedSheet,
         });
@@ -360,9 +360,18 @@ export const ExcelUploadModal: React.FC<Props> = ({
                 <span className="font-bold text-slate-700">目標站點 / 車廠:</span>
                 <select
                   value={targetDepotCode}
-                  onChange={(e) => setTargetDepotCode(e.target.value)}
-                  className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    setTargetDepotCode(code);
+                    if (code === 'ALL') {
+                      setFilterByDepot(false);
+                    }
+                  }}
+                  className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-500 focus:outline-none cursor-pointer"
                 >
+                  <optgroup label="全站總覽 (All Stations ‧ 推薦)">
+                    <option value="ALL">全部站點 (ALL - 自動依據 Excel 分流至所有站點)</option>
+                  </optgroup>
                   <optgroup label="選擇站點">
                     {MTR_STATIONS_LIST.map((loc) => (
                       <option key={loc.code} value={loc.code}>
@@ -380,25 +389,40 @@ export const ExcelUploadModal: React.FC<Props> = ({
                 </select>
               </div>
 
-              <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={filterByDepot}
-                  onChange={(e) => setFilterByDepot(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded text-emerald-600 bg-white border-slate-300 focus:ring-emerald-500"
-                />
-                <Filter className="w-3 h-3 text-emerald-600" />
-                <span>嚴格過濾此站 (非此站忽略)</span>
-              </label>
+              {targetDepotCode === 'ALL' ? (
+                <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>自動依各列 ASSETNUM / LOCATION 分流各站</span>
+                </div>
+              ) : (
+                <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={filterByDepot}
+                    onChange={(e) => setFilterByDepot(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded text-emerald-600 bg-white border-slate-300 focus:ring-emerald-500"
+                  />
+                  <Filter className="w-3 h-3 text-emerald-600" />
+                  <span>嚴格過濾此站 (非此站忽略)</span>
+                </label>
+              )}
             </div>
 
             <p className="text-[11px] text-slate-500 leading-tight">
-              目標站點：
-              <span className="text-emerald-700 font-bold font-mono ml-1">
-                {targetDepotCode}
-              </span>
-              {currentLocation ? ` (${currentLocation.nameZh} - ${currentLocation.line})` : ''}
-              。系統優先檢查 <span className="font-semibold text-slate-700">ASSETNUM 頭 3 個英文字</span>（如 LAK、TIC、CRP、DIH），非所選站點將自動忽略不用，QTY 固定為 1。
+              {targetDepotCode === 'ALL' ? (
+                <>
+                  已選取【<strong className="text-emerald-700">全部站點 (ALL)</strong>】：系統將自動掃描 Excel 每列的 ASSETNUM 前 3 碼或 LOCATION（如 LAK、TIC 等），分流到各站點。匯入後系統會<strong className="text-emerald-800">只保留並匯出您 Excel 內實際存在的站點</strong>，一站一頁！
+                </>
+              ) : (
+                <>
+                  目標站點：
+                  <span className="text-emerald-700 font-bold font-mono ml-1">
+                    {targetDepotCode}
+                  </span>
+                  {currentLocation ? ` (${currentLocation.nameZh} - ${currentLocation.line})` : ''}
+                  。系統優先檢查 <span className="font-semibold text-slate-700">ASSETNUM 頭 3 個英文字</span>（如 LAK、TIC、CRP、DIH），非所選站點將自動忽略不用，QTY 固定為 1。
+                </>
+              )}
             </p>
           </div>
 
@@ -640,6 +664,8 @@ export const ExcelUploadModal: React.FC<Props> = ({
                   <span>
                     {multiStationCount > 1
                       ? `確認匯入全部 ${multiStationCount} 個站點 (一站一頁)`
+                      : targetDepotCode === 'ALL'
+                      ? '確認讀取並填入報告 (全部站點 / 自動分流)'
                       : `確認讀取並填入報告 (${targetDepotCode})`}
                   </span>
                   <ArrowRight className="w-3.5 h-3.5" />

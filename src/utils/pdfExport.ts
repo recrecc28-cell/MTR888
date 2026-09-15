@@ -23,13 +23,23 @@ function prepareClonedElement(clonedElement: HTMLElement): void {
   });
 }
 
+export interface ExportPdfResult {
+  blob: Blob;
+  blobUrl: string;
+  fileName: string;
+  pageCount: number;
+}
+
 /**
- * Downloads a jsPDF instance cleanly in both standalone and iframe environments.
+ * Downloads a jsPDF instance cleanly in both standalone and iframe environments,
+ * returning the blob and blobUrl for direct link download / preview modals.
  */
-function downloadPdfDocument(pdf: jsPDF, fileName: string): void {
+function downloadPdfDocument(pdf: jsPDF, fileName: string): { blob: Blob; blobUrl: string } {
+  const blob = pdf.output('blob');
+  const blobUrl = URL.createObjectURL(blob);
+
+  // Attempt automatic browser download
   try {
-    const blob = pdf.output('blob');
-    const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = fileName;
@@ -40,12 +50,17 @@ function downloadPdfDocument(pdf: jsPDF, fileName: string): void {
       if (link.parentNode) {
         link.parentNode.removeChild(link);
       }
-      URL.revokeObjectURL(blobUrl);
-    }, 1500);
+    }, 1000);
   } catch (err) {
-    console.warn('Fallback to direct pdf.save()', err);
-    pdf.save(fileName);
+    console.warn('Silent download attempt error, falling back to pdf.save():', err);
+    try {
+      pdf.save(fileName);
+    } catch (saveErr) {
+      console.warn('pdf.save failed:', saveErr);
+    }
   }
+
+  return { blob, blobUrl };
 }
 
 /**
@@ -96,8 +111,18 @@ export async function exportToPdf(
   elementId: string,
   fileName: string = 'MTR_PM_Performance_Report.pdf',
   _orientation: 'landscape' | 'portrait' = 'landscape'
-): Promise<void> {
-  const element = document.getElementById(elementId);
+): Promise<ExportPdfResult> {
+  let element = document.getElementById(elementId);
+  if (!element) {
+    // Try smart fallbacks for single station
+    const stnCode = elementId.replace('pdf-paper-', '').replace('station-wrapper-', '').replace('pdf-station-', '');
+    element =
+      document.getElementById(`pdf-paper-${stnCode}`) ||
+      document.getElementById(`pdf-station-${stnCode}`) ||
+      document.getElementById('pdf-report-canvas') ||
+      document.querySelector('.station-pdf-page') as HTMLElement;
+  }
+
   if (!element) {
     throw new Error(`找不到 PDF 報告元件 (ID: ${elementId})`);
   }
@@ -112,7 +137,8 @@ export async function exportToPdf(
     scrollY: 0,
     windowWidth: 1150,
     onclone: (clonedDoc) => {
-      const clonedElement = clonedDoc.getElementById(elementId);
+      const targetId = element!.id;
+      const clonedElement = targetId ? clonedDoc.getElementById(targetId) : null;
       if (clonedElement) {
         prepareClonedElement(clonedElement);
       }
@@ -127,7 +153,14 @@ export async function exportToPdf(
   });
 
   addCanvasToPdfPage(pdf, canvas, true);
-  downloadPdfDocument(pdf, fileName);
+  const { blob, blobUrl } = downloadPdfDocument(pdf, fileName);
+
+  return {
+    blob,
+    blobUrl,
+    fileName,
+    pageCount: 1,
+  };
 }
 
 /**
@@ -139,7 +172,7 @@ export async function exportAllStationsToPdf(
   fileName: string = 'MTR_PM_Reports_All_Stations.pdf',
   _orientation: 'landscape' | 'portrait' = 'landscape',
   onProgress?: (current: number, total: number) => void
-): Promise<void> {
+): Promise<ExportPdfResult> {
   if (!elementIds || elementIds.length === 0) {
     throw new Error('未指定任何站點進行 PDF 下載');
   }
@@ -159,8 +192,12 @@ export async function exportAllStationsToPdf(
 
     // If specific export canvas element not found, try fallback patterns
     if (!element) {
-      const stnCode = elId.replace('export-canvas-', '').replace('pdf-station-', '');
-      element = document.getElementById(`pdf-station-${stnCode}`) || document.getElementById(`export-canvas-${stnCode}`);
+      const stnCode = elId.replace('pdf-paper-', '').replace('station-wrapper-', '').replace('pdf-station-', '').replace('export-canvas-', '');
+      element =
+        document.getElementById(`pdf-paper-${stnCode}`) ||
+        document.getElementById(`pdf-station-${stnCode}`) ||
+        document.getElementById(`station-wrapper-${stnCode}`) ||
+        document.getElementById(`export-canvas-${stnCode}`);
     }
     if (!element) continue;
 
@@ -182,7 +219,8 @@ export async function exportAllStationsToPdf(
         scrollY: 0,
         windowWidth: 1150,
         onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.getElementById(elId) || clonedDoc.getElementById(element!.id);
+          const targetId = element!.id;
+          const clonedElement = targetId ? clonedDoc.getElementById(targetId) : null;
           if (clonedElement) {
             prepareClonedElement(clonedElement);
           }
@@ -200,5 +238,12 @@ export async function exportAllStationsToPdf(
     throw new Error('未能擷取站點內容，請確認各站點資料');
   }
 
-  downloadPdfDocument(pdf, fileName);
+  const { blob, blobUrl } = downloadPdfDocument(pdf, fileName);
+
+  return {
+    blob,
+    blobUrl,
+    fileName,
+    pageCount: renderedPagesCount,
+  };
 }

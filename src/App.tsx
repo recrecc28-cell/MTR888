@@ -28,6 +28,7 @@ import { ArchiveHistoryModal } from './components/ArchiveHistoryModal';
 import { HelpGuideModal } from './components/HelpGuideModal';
 import { PPTModal } from './components/PPTModal';
 import { SignatureModal, SignatoryRole } from './components/SignatureModal';
+import { PdfDownloadSuccessModal } from './components/PdfDownloadSuccessModal';
 import { exportToPdf, exportAllStationsToPdf } from './utils/pdfExport';
 import {
   Check,
@@ -328,6 +329,19 @@ export default function App() {
   const [exportProgress, setExportProgress] = useState<string>('');
   const [lastSavedTime, setLastSavedTime] = useState<string | undefined>();
 
+  // Tracks stations present in the most recently imported Excel
+  const [importedExcelStations, setImportedExcelStations] = useState<string[]>([]);
+
+  // PDF download success dialog state (guarantees direct click download, new tab preview, and print fallback)
+  const [pdfDownloadModal, setPdfDownloadModal] = useState<{
+    isOpen: boolean;
+    blobUrl: string;
+    fileName: string;
+    pageCount: number;
+    stationCount: number;
+    fileSizeKB: number;
+  } | null>(null);
+
   // WO Fill Stats
   const woStats = useMemo(() => {
     const stats: Record<string, { filled: number; total: number }> = {};
@@ -399,47 +413,69 @@ export default function App() {
       ? (parsedData.items as MaintenanceItem[]).map((it, idx) => ({
           ...it,
           id: it.id || `item-${idx + 1}`,
-          station: targetCode,
+          station: it.station || targetCode,
           qty: '1', // QTY=1 forever
         }))
       : [];
 
+    // 1. Identify all station codes that actually exist in the uploaded Excel
+    const detectedStationsInExcel = new Set<string>();
+
+    if (parsedData.reportsByStationMap && Object.keys(parsedData.reportsByStationMap).length > 0) {
+      Object.entries(parsedData.reportsByStationMap).forEach(([stnCode, stnRpt]: [string, any]) => {
+        if (stnRpt && Array.isArray(stnRpt.items) && stnRpt.items.length > 0) {
+          detectedStationsInExcel.add(stnCode.toUpperCase());
+        }
+      });
+    }
+
+    if (targetCode !== 'ALL' && finalItems.length > 0) {
+      detectedStationsInExcel.add(targetCode);
+    }
+
+    const detectedStationList = Array.from(detectedStationsInExcel);
+    setImportedExcelStations(detectedStationList);
+
     setReportsByDepot((prev) => {
       const nextMap = { ...prev };
-      const currentForTarget = nextMap[targetCode] || createEmptyReport(targetCode);
-      nextMap[targetCode] = {
-        ...currentForTarget,
-        ...parsedData,
-        depotCode: targetCode,
-        depotTitle: parsedData.depotTitle || getLocationTitle(targetCode),
-        reportMonthYear: parsedData.reportMonthYear || parsedData.detectedMonthYear || currentForTarget.reportMonthYear || 'September - 2026',
-        contractNo: parsedData.contractNo || currentForTarget.contractNo || 'M1202-19E',
-        items: finalItems, // ONLY items from the uploaded Excel!
-        overallTotals: parsedData.overallTotals || {
-          pmWoTotal: '',
-          qtyTotal: String(finalItems.length),
-          mTotal: String(finalItems.filter((i) => i.m && i.m.trim() !== '').length || (finalItems.length ? '100%' : '')),
-          m2Total: '',
-          m3Total: '',
-          m4Total: '',
-          m6Total: '',
-          yTotal: '',
-          m18Total: '',
-          y2Total: '',
-          y3Total: '',
-        },
-        signatories: {
-          ...currentForTarget.signatories,
-          ...(parsedData.signatories || {}),
-        },
-        updatedAt: new Date().toISOString(),
-      };
 
-      // Also merge any other stations found in the imported file
-      if (parsedData.reportsByStationMap) {
+      // User requirement: "我上傳EXCEL表後, 只需匯出我EXCEL內有的站點"
+      // Clear any station that was NOT in the uploaded Excel file so user only exports what's in their Excel!
+      ALL_MTR_LOCATIONS.forEach((loc) => {
+        if (!detectedStationsInExcel.has(loc.code)) {
+          const empty = createEmptyReport(loc.code);
+          nextMap[loc.code] = {
+            ...empty,
+            items: [],
+            overallTotals: {
+              pmWoTotal: '',
+              qtyTotal: '',
+              mTotal: '',
+              m2Total: '',
+              m3Total: '',
+              m4Total: '',
+              m6Total: '',
+              yTotal: '',
+              m18Total: '',
+              y2Total: '',
+              y3Total: '',
+            },
+            updatedAt: new Date().toISOString(),
+          };
+        }
+      });
+
+      // Populate stations present in Excel
+      if (parsedData.reportsByStationMap && Object.keys(parsedData.reportsByStationMap).length > 0) {
         Object.entries(parsedData.reportsByStationMap).forEach(([stnCode, stnReport]: [string, any]) => {
-          if (!stnReport || !stnReport.items || stnCode === targetCode) return;
+          if (!stnReport || !stnReport.items || stnReport.items.length === 0) return;
           const curr = nextMap[stnCode] || createEmptyReport(stnCode);
+          const stnItems: MaintenanceItem[] = (stnReport.items as MaintenanceItem[]).map((it, idx) => ({
+            ...it,
+            id: it.id || `item-${stnCode}-${idx + 1}`,
+            station: stnCode,
+            qty: '1',
+          }));
           nextMap[stnCode] = {
             ...curr,
             ...stnReport,
@@ -447,32 +483,39 @@ export default function App() {
             depotTitle: stnReport.depotTitle || getLocationTitle(stnCode),
             reportMonthYear: stnReport.reportMonthYear || parsedData.reportMonthYear || 'September - 2026',
             contractNo: stnReport.contractNo || 'M1202-19E',
-            items: (stnReport.items as MaintenanceItem[]).map((it, idx) => ({
-              ...it,
-              id: it.id || `item-${stnCode}-${idx + 1}`,
-              station: stnCode,
-              qty: '1',
-            })),
+            items: stnItems,
             updatedAt: new Date().toISOString(),
           };
         });
       }
 
+      // If single station targetCode is specified and not ALL, also ensure it has the items
+      if (targetCode !== 'ALL' && finalItems.length > 0) {
+        const curr = nextMap[targetCode] || createEmptyReport(targetCode);
+        nextMap[targetCode] = {
+          ...curr,
+          ...parsedData,
+          depotCode: targetCode,
+          depotTitle: parsedData.depotTitle || getLocationTitle(targetCode),
+          reportMonthYear: parsedData.reportMonthYear || curr.reportMonthYear || 'September - 2026',
+          contractNo: parsedData.contractNo || 'M1202-19E',
+          items: finalItems,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
       return nextMap;
     });
 
-    const stationMapKeys = parsedData.reportsByStationMap
-      ? Object.keys(parsedData.reportsByStationMap)
-      : [];
-    const count = stationMapKeys.length;
-    if (count > 1) {
+    setAllStationsViewFilter('withData');
+
+    if (detectedStationList.length > 1 || currentDepot === 'ALL' || targetCode === 'ALL') {
       setCurrentDepot('ALL');
-      showToast(`成功匯入 ${fileName}：已直接轉成所有 ${count} 個站點內容！已為您切換至「全部站點 (一頁一站)」預覽模式，可直接在頁面預覽並列印。`);
+      showToast(`成功匯入 ${fileName}：已自動分流至 Excel 內的 ${detectedStationList.length} 個站點 (${detectedStationList.join(', ')})！已自動過濾只保留並匯出這些站點。`);
     } else {
-      if (currentDepot !== 'ALL') {
-        setCurrentDepot(targetCode);
-      }
-      showToast(`成功匯入 ${fileName} (站點: ${targetCode})`);
+      const singleStn = detectedStationList[0] || targetCode;
+      setCurrentDepot(singleStn);
+      showToast(`成功匯入 ${fileName} (站點: ${singleStn})`);
     }
   };
 
@@ -520,13 +563,24 @@ export default function App() {
       await handleExportAllStationsPdf();
       return;
     }
+    const targetCode = reportData.depotCode;
+    const targetElementId = `pdf-paper-${targetCode}`;
     setIsExporting(true);
-    setExportProgress(`正在準備 ${reportData.depotCode} 站點報告 (自動縮成1頁)...`);
-    showToast('正在產生並下載 A4 PDF 報告 (包含簽名、自動縮成1頁)...');
+    setExportProgress(`正在準備 ${targetCode} 站點報告 (自動縮成1頁)...`);
+    showToast(`正在產生並下載 ${targetCode} A4 PDF 報告 (包含簽名、自動縮成1頁)...`);
     try {
-      const fileName = `MTR_PM_Report_${reportData.depotCode}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
-      await exportToPdf('pdf-report-canvas', fileName, 'landscape');
-      showToast('PDF 報告下載成功！');
+      const fileName = `MTR_PM_Report_${targetCode}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
+      const result = await exportToPdf(targetElementId, fileName, 'landscape');
+      
+      setPdfDownloadModal({
+        isOpen: true,
+        blobUrl: result.blobUrl,
+        fileName: result.fileName,
+        pageCount: result.pageCount,
+        stationCount: 1,
+        fileSizeKB: Math.round(result.blob.size / 1024),
+      });
+      showToast(`PDF 報告已成功生成！`);
     } catch (err: any) {
       console.error('PDF export error:', err);
       showToast('下載失敗：' + (err?.message || '請重試'));
@@ -538,26 +592,50 @@ export default function App() {
 
   // Export ALL stations to a single PDF (one station name per PDF sheet)
   const handleExportAllStationsPdf = async () => {
-    const activeStations = stationsWithData.length > 0 ? stationsWithData : [currentDepot];
+    // Only export stations that have data from the uploaded Excel
+    const activeStations = stationsWithData.length > 0
+      ? stationsWithData
+      : (importedExcelStations.length > 0 ? importedExcelStations : [currentDepot]);
+
+    if (activeStations.length === 0) {
+      showToast('目前沒有任何站點資料可供匯出');
+      return;
+    }
+
+    // Ensure we are in ALL mode so the elements exist on screen
+    if (currentDepot !== 'ALL') {
+      setCurrentDepot('ALL');
+      setAllStationsViewFilter('withData');
+      // Wait for React to render the station DOM elements
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+
     setIsExporting(true);
-    setExportProgress(`正在準備 ${activeStations.length} 個站點資料...`);
+    setExportProgress(`正在準備 ${activeStations.length} 個站點資料 (一站一頁)...`);
     showToast(`正在產生 ${activeStations.length} 個站點的 PDF 報告 (一站一頁)...`);
+
     try {
-      // Prioritize on-screen elements if in ALL mode, otherwise offscreen elements
-      const elementIds = activeStations.map((code) =>
-        currentDepot === 'ALL' ? `pdf-station-${code}` : `export-canvas-${code}`
-      );
-      const fileName = `MTR_PM_Report_All_${activeStations.length}_Stations_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
-      await exportAllStationsToPdf(
+      const elementIds = activeStations.map((code) => `pdf-paper-${code}`);
+      const fileName = `MTR_PM_Report_Stations_${activeStations.join('_')}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
+      
+      const result = await exportAllStationsToPdf(
         elementIds,
         fileName,
         'landscape',
         (curr, total) => {
           setExportProgress(`正在轉換 PDF 頁面 (第 ${curr} / ${total} 站，一站一頁)...`);
-          showToast(`正在轉換 PDF 頁面 (${curr} / ${total} 站)...`);
         }
       );
-      showToast(`成功下載全部 ${activeStations.length} 個站點 PDF (一站一頁)！`);
+
+      setPdfDownloadModal({
+        isOpen: true,
+        blobUrl: result.blobUrl,
+        fileName: result.fileName,
+        pageCount: result.pageCount,
+        stationCount: activeStations.length,
+        fileSizeKB: Math.round(result.blob.size / 1024),
+      });
+      showToast(`成功產生全部 ${activeStations.length} 個站點 PDF (一站一頁)！`);
     } catch (err: any) {
       console.error('Failed to export all stations to pdf', err);
       showToast('下載失敗：' + (err?.message || '請確認站點內容'));
@@ -565,6 +643,10 @@ export default function App() {
       setIsExporting(false);
       setExportProgress('');
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleLoadSampleLak = () => {
@@ -703,6 +785,7 @@ export default function App() {
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
+        onPrintClick={handlePrint}
         onOpenHelpClick={() => setIsHelpOpen(true)}
         onOpenPptClick={() => setIsPptOpen(true)}
         lastSavedTime={lastSavedTime}
@@ -960,9 +1043,20 @@ export default function App() {
         isOpen={isExcelUploadOpen}
         onClose={() => setIsExcelUploadOpen(false)}
         onDataParsed={handleDataParsedFromExcel}
-        currentDepotCode={reportData.depotCode}
+        currentDepotCode={currentDepot}
         existingItems={reportData.items}
         defaultTab={uploadModalTab}
+      />
+
+      {/* PDF Download Success Modal (Provides guaranteed 1-click download, new tab preview, and print fallback) */}
+      <PdfDownloadSuccessModal
+        isOpen={!!pdfDownloadModal?.isOpen}
+        onClose={() => setPdfDownloadModal(null)}
+        blobUrl={pdfDownloadModal?.blobUrl || null}
+        fileName={pdfDownloadModal?.fileName || 'MTR_PM_Report.pdf'}
+        pageCount={pdfDownloadModal?.pageCount || 1}
+        stationCount={pdfDownloadModal?.stationCount || 1}
+        fileSizeKB={pdfDownloadModal?.fileSizeKB || 0}
       />
 
       <ArchiveHistoryModal

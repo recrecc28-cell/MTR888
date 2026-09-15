@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Trash2,
   Layers,
+  Printer,
 } from 'lucide-react';
 
 interface Props {
@@ -26,6 +27,7 @@ interface Props {
   onUploadExcelClick?: () => void;
   onExportAllStationsPdfClick?: () => void;
   stationsWithDataCount?: number;
+  onPrintClick?: () => void;
 }
 
 export const HeaderNavbar: React.FC<Props> = ({
@@ -36,6 +38,7 @@ export const HeaderNavbar: React.FC<Props> = ({
   onOpenPptClick,
   lastSavedTime,
   archiveCount = 0,
+  onPrintClick,
 }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,6 +82,19 @@ export const HeaderNavbar: React.FC<Props> = ({
 
         {/* Primary Action Buttons & More Dropdown (No duplicate buttons) */}
         <div className="flex items-center gap-2">
+          {/* Print / Save as PDF button (Native browser print fallback) */}
+          {onPrintClick && (
+            <button
+              type="button"
+              onClick={onPrintClick}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition-colors cursor-pointer"
+              title="開啟列印對話框直接「另存為 PDF」(一站一頁，100% 清晰)"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-600" />
+              <span className="hidden sm:inline">列印 / 另存 PDF</span>
+            </button>
+          )}
+
           {/* Core Button: Download PDF */}
           <button
             type="button"
