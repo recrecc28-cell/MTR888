@@ -141,6 +141,26 @@ export const STATION_STANDARD_TEMPLATES: Record<string, StationTemplateDefinitio
       { workDescription: 'PHE-004 Cleaning', qty: '1' },
     ],
   },
+  OCC: {
+    code: 'OCC',
+    title: 'MTRC AEL / TCL - OCC',
+    items: [
+      { workDescription: 'Air Handling Unit', qty: '3' },
+      { workDescription: 'Primary Air Handling Unit', qty: '2' },
+      { workDescription: 'Computer Air Conditioners', qty: '12' },
+      { workDescription: 'Air Cooled Chiller', qty: '2' },
+      { workDescription: 'Fan Coil Unit', qty: '84' },
+    ],
+  },
+  OLY: {
+    code: 'OLY',
+    title: 'MTRC AEL / TCL - OLY',
+    items: [
+      { workDescription: 'Air Handling Unit', qty: '12' },
+      { workDescription: 'Primary Air Handling Unit', qty: '4' },
+      { workDescription: 'Air Cooled Chiller', qty: '3' },
+    ],
+  },
   SST: {
     code: 'SST',
     title: 'MTRC AEL / TCL - SST',

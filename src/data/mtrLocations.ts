@@ -10,7 +10,7 @@ export interface MTRLocation {
   description: string;
 }
 
-// 選擇站點：名字排列由 A-Z (Sorted alphabetically by Code / English name)
+// 17 個合約標準車站與設施：按英文代碼 A-Z 排列
 export const MTR_STATIONS_LIST: MTRLocation[] = [
   {
     code: 'AIR',
@@ -38,33 +38,6 @@ export const MTR_STATIONS_LIST: MTRLocation[] = [
     type: 'station',
     line: '港島綫 / 荃灣綫 / 香港站通道',
     description: 'Central Station 月度保養報告',
-  },
-  {
-    code: 'CRP',
-    nameZh: '紅磡貨運場 / 車站',
-    nameEn: 'Freight Yard / Station - CRP',
-    title: 'MTRC Station - CRP',
-    type: 'station',
-    line: '東鐵綫 / 屯馬綫',
-    description: 'CRP Station 月度保養報告',
-  },
-  {
-    code: 'DIH',
-    nameZh: '鑽石山站',
-    nameEn: 'Diamond Hill Station',
-    title: 'MTRC Station - DIH',
-    type: 'station',
-    line: '屯馬綫 / 觀塘綫',
-    description: 'Diamond Hill Station 月度保養報告',
-  },
-  {
-    code: 'ETS',
-    nameZh: '尖東站',
-    nameEn: 'East Tsim Sha Tsui Station',
-    title: 'MTRC Station - ETS',
-    type: 'station',
-    line: '屯馬綫 (TML)',
-    description: 'East Tsim Sha Tsui Station 月度保養報告',
   },
   {
     code: 'HIC',
@@ -112,15 +85,6 @@ export const MTR_STATIONS_LIST: MTRLocation[] = [
     description: 'Lai King Station 月度保養報告',
   },
   {
-    code: 'MEF',
-    nameZh: '美孚站',
-    nameEn: 'Mei Foo Station',
-    title: 'MTRC Station - MEF',
-    type: 'station',
-    line: '荃灣綫 / 屯馬綫',
-    description: 'Mei Foo Station 月度保養報告',
-  },
-  {
     code: 'NIC',
     nameZh: '南昌站',
     nameEn: 'Nam Cheong Station',
@@ -133,7 +97,7 @@ export const MTR_STATIONS_LIST: MTRLocation[] = [
     code: 'OCC',
     nameZh: '青衣車務控制中心',
     nameEn: 'Operations Control Centre',
-    title: 'MTRC OCC - Tsing Yi',
+    title: 'MTRC AEL / TCL - OCC',
     type: 'facility',
     line: '車務控制中心',
     description: 'Operations Control Centre 設施保養報告',
@@ -142,7 +106,7 @@ export const MTR_STATIONS_LIST: MTRLocation[] = [
     code: 'OLY',
     nameZh: '奧運站',
     nameEn: 'Olympic Station',
-    title: 'MTRC Station - OLY',
+    title: 'MTRC AEL / TCL - OLY',
     type: 'station',
     line: '東涌綫 (TCL)',
     description: 'Olympic Station 月度保養報告',
@@ -287,6 +251,8 @@ export const MTR_DEPOTS_LIST: MTRLocation[] = [
     description: 'Tsuen Wan Depot 保養報告',
   },
 ];
+
+export const MTR_CONTRACT_17_STATIONS: MTRLocation[] = MTR_STATIONS_LIST;
 
 export const ALL_MTR_LOCATIONS: MTRLocation[] = [
   ...MTR_STATIONS_LIST,

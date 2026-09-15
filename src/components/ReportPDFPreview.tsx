@@ -406,11 +406,11 @@ export const ReportPDFPreview: React.FC<Props> = ({
     if (!trimmed) {
       return hasColItems ? '100%' : '';
     }
-    // If it's a numeric count like "1", "2", "3", replace with "100%"
-    if (/^\d+$/.test(trimmed)) {
+    // If it's a numeric count like "1", "2", "3", or contains numbers, strictly return "100%"
+    if (/^\d+(\.\d+)?%?$/.test(trimmed)) {
       return '100%';
     }
-    return trimmed;
+    return trimmed.includes('%') ? trimmed : '100%';
   };
 
   const hasItems = items.length > 0;
@@ -425,13 +425,13 @@ export const ReportPDFPreview: React.FC<Props> = ({
 
   return (
     <EditingContext.Provider value={isEditingEnabled}>
-      <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto print:p-0 print:m-0 print:overflow-visible print:bg-white">
+      <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto print:p-0 print:m-0 print:overflow-visible print:overflow-x-visible print:overflow-y-visible print:bg-white">
         {/* Paper Container matching screenshot proportions */}
         <div
           id={containerId || `pdf-paper-${reportData.depotCode}`}
           data-station={reportData.depotCode}
           style={containerStyle}
-          className="report-paper-sheet bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text print:shadow-none print:border-none print:max-w-none print:overflow-visible"
+          className="report-paper-sheet bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text print:shadow-none print:border-none print:max-w-none print:overflow-hidden print:m-0 print:p-0"
         >
         {/* --- HEADER SECTION --- */}
         <div style={headerStyle} className="text-center mb-5 relative z-10">
@@ -628,6 +628,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                                 onChange={(val) => handleItemChange(item.id, 'workDescription', val)}
                                 className="text-left font-normal"
                                 multiline={true}
+                                stripAngleBrackets={true}
                                 placeholder="請輸入設備工作說明 (Work Description)"
                               />
                             </td>
@@ -897,14 +898,28 @@ export const ReportPDFPreview: React.FC<Props> = ({
         </div>
 
         {/* --- SIGNATORY FOOTER TABLE SECTION (Exact 3-column Excel Grid Match) --- */}
-        <div style={signatoryStyle} className="mt-8 relative z-10">
+        {/* --- SIGNATORIES SECTION --- */}
+        <div style={signatoryStyle} className="mt-8 relative z-10 print:mt-4">
           <table className="w-full border-collapse text-left" style={{ borderCollapse: 'collapse', borderColor: fineTuneSettings.tableBorderColor }}>
             <tbody>
-              {/* Row 1: Role Title & Signature */}
+              {/* Row 1: Role Headers */}
+              <tr>
+                <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-middle font-semibold">
+                  <span>Prepared By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                </td>
+                <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-middle font-semibold">
+                  <span>Verified By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                </td>
+                <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-middle font-semibold">
+                  <span>Endorsed By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                </td>
+              </tr>
+
+              {/* Row 2: Signatures (Sign must separate) */}
               <tr>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center justify-between">
-                    <span>Prepared By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                    <span className="whitespace-nowrap">Sign &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
                     {isEditingEnabled && (
                       <button
                         type="button"
@@ -919,7 +934,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                   </div>
                   <div
                     onClick={() => isEditingEnabled && onOpenSignatureModal?.('preparedBy', reportData.depotCode)}
-                    className={`h-12 my-1 flex items-center justify-center transition-all ${
+                    className={`h-11 my-0.5 flex items-center justify-center transition-all ${
                       isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
                     }`}
                   >
@@ -929,11 +944,11 @@ export const ReportPDFPreview: React.FC<Props> = ({
                         alt="Prepared By Signature"
                         crossOrigin="anonymous"
                         referrerPolicy="no-referrer"
-                        className="max-h-11 max-w-full object-contain"
+                        className="max-h-10 max-w-full object-contain"
                       />
                     ) : (
                       isEditingEnabled && (
-                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2.5 py-1.5 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
+                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2 py-1 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
                           <PenTool className="w-3 h-3 text-slate-400" />
                           <span>點擊手簽或上傳簽名樣式</span>
                         </div>
@@ -943,7 +958,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 </td>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center justify-between">
-                    <span>Verified By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                    <span className="whitespace-nowrap">Sign &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
                     {isEditingEnabled && (
                       <button
                         type="button"
@@ -958,7 +973,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                   </div>
                   <div
                     onClick={() => isEditingEnabled && onOpenSignatureModal?.('verifiedBy', reportData.depotCode)}
-                    className={`h-12 my-1 flex items-center justify-center transition-all ${
+                    className={`h-11 my-0.5 flex items-center justify-center transition-all ${
                       isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
                     }`}
                   >
@@ -968,11 +983,11 @@ export const ReportPDFPreview: React.FC<Props> = ({
                         alt="Verified By Signature"
                         crossOrigin="anonymous"
                         referrerPolicy="no-referrer"
-                        className="max-h-11 max-w-full object-contain"
+                        className="max-h-10 max-w-full object-contain"
                       />
                     ) : (
                       isEditingEnabled && (
-                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2.5 py-1.5 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
+                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2 py-1 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
                           <PenTool className="w-3 h-3 text-slate-400" />
                           <span>點擊手簽或上傳簽名樣式</span>
                         </div>
@@ -982,7 +997,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 </td>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center justify-between">
-                    <span>Endorsed By &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
+                    <span className="whitespace-nowrap">Sign &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
                     {isEditingEnabled && (
                       <button
                         type="button"
@@ -997,7 +1012,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                   </div>
                   <div
                     onClick={() => isEditingEnabled && onOpenSignatureModal?.('endorsedBy', reportData.depotCode)}
-                    className={`h-12 my-1 flex items-center justify-center transition-all ${
+                    className={`h-11 my-0.5 flex items-center justify-center transition-all ${
                       isEditingEnabled ? 'cursor-pointer hover:bg-slate-50/80 rounded' : ''
                     }`}
                   >
@@ -1007,11 +1022,11 @@ export const ReportPDFPreview: React.FC<Props> = ({
                         alt="Endorsed By Signature"
                         crossOrigin="anonymous"
                         referrerPolicy="no-referrer"
-                        className="max-h-11 max-w-full object-contain"
+                        className="max-h-10 max-w-full object-contain"
                       />
                     ) : (
                       isEditingEnabled && (
-                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2.5 py-1.5 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
+                        <div className="no-print text-[10px] text-slate-400 border border-dashed border-slate-300 rounded px-2 py-1 flex items-center gap-1.5 hover:border-indigo-400 hover:text-indigo-600 bg-white/60">
                           <PenTool className="w-3 h-3 text-slate-400" />
                           <span>點擊手簽或上傳簽名樣式</span>
                         </div>
@@ -1021,7 +1036,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 </td>
               </tr>
 
-              {/* Row 2: Name & Staff No. */}
+              {/* Row 3: Name & Staff No. */}
               <tr>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
@@ -1073,7 +1088,7 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 </td>
               </tr>
 
-              {/* Row 3: Date - User Rule: DATE 位置不能輸入字，做一個日期選取功能，統一日期格式 YYYY-MM-DD */}
+              {/* Row 4: Date */}
               <tr>
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
@@ -1121,7 +1136,6 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     </div>
                   </div>
                 </td>
-
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
                     <span className="whitespace-nowrap">Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>
@@ -1168,7 +1182,6 @@ export const ReportPDFPreview: React.FC<Props> = ({
                     </div>
                   </div>
                 </td>
-
                 <td style={{ ...borderStyle, padding: '4px 6px', width: '33.33%' }} className="align-top font-semibold">
                   <div className="flex items-center gap-1">
                     <span className="whitespace-nowrap">Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span>

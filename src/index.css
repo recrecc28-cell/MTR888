@@ -20,14 +20,16 @@ textarea::-webkit-scrollbar {
       scrollbar-width: none !important;
       -ms-overflow-style: none !important;
     }
-    *::-webkit-scrollbar {
+    *::-webkit-scrollbar,
+    ::-webkit-scrollbar {
       display: none !important;
       width: 0 !important;
       height: 0 !important;
     }
-    html, body, #root, main, div, table, tr, td, th {
+    html, body, #root, main, div, table, tr, td, th, tbody, thead, section, article {
       scrollbar-width: none !important;
       -ms-overflow-style: none !important;
+      overflow: visible !important;
     }
 
     /* Hide all non-printable UI elements */
