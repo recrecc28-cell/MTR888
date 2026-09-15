@@ -3,51 +3,49 @@ import { jsPDF } from 'jspdf';
 
 /**
  * Clean up cloned element before html2canvas rendering:
- * - Removes interactive buttons and inputs (.no-print)
- * - Converts input/textarea to styled text nodes for crisp rendering
- * - Preserves signatures and images
+ * - Removes interactive buttons and controls (.no-print)
+ * - Preserves typed input and textarea values as HTML attributes
  */
-function prepareClonedElement(clonedElement: HTMLElement, clonedDoc: Document): void {
-  // Remove buttons and interactive hints
+function prepareClonedElement(clonedElement: HTMLElement): void {
+  // Remove buttons, edit tooltips, and interactive hints
   const noPrints = clonedElement.querySelectorAll('.no-print');
   noPrints.forEach((el) => el.remove());
 
-  // Convert all input and textarea elements into text nodes
-  const formInputs = clonedElement.querySelectorAll('input, textarea');
+  // Set input and textarea values as attributes so html2canvas renders typed text faithfully
+  const formInputs = clonedElement.querySelectorAll('input');
   formInputs.forEach((input: any) => {
-    const textValue = input.value || '';
-    const span = clonedDoc.createElement('span');
-    span.innerText = textValue;
-
-    try {
-      const computedStyle = window.getComputedStyle(input);
-      span.style.fontFamily = computedStyle.fontFamily;
-      span.style.fontSize = computedStyle.fontSize;
-      span.style.fontWeight = computedStyle.fontWeight;
-      span.style.lineHeight = computedStyle.lineHeight;
-      span.style.color = computedStyle.color;
-      span.style.textAlign = computedStyle.textAlign;
-    } catch {
-      // Fallback styling
-      span.style.fontSize = '10px';
-      span.style.color = '#000000';
-    }
-
-    span.style.whiteSpace = 'pre-line';
-    span.style.display = 'inline-block';
-    span.style.width = '100%';
-
-    if (input.parentNode) {
-      input.parentNode.replaceChild(span, input);
-    }
+    input.setAttribute('value', input.value || '');
   });
 
-  // Ensure all image elements (like signatures) have explicit crossOrigin and display
-  const images = clonedElement.querySelectorAll('img');
-  images.forEach((img) => {
-    img.setAttribute('crossOrigin', 'anonymous');
-    img.style.maxWidth = '100%';
+  const textareas = clonedElement.querySelectorAll('textarea');
+  textareas.forEach((ta: any) => {
+    ta.textContent = ta.value || '';
   });
+}
+
+/**
+ * Downloads a jsPDF instance cleanly in both standalone and iframe environments.
+ */
+function downloadPdfDocument(pdf: jsPDF, fileName: string): void {
+  try {
+    const blob = pdf.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      if (link.parentNode) {
+        link.parentNode.removeChild(link);
+      }
+      URL.revokeObjectURL(blobUrl);
+    }, 1500);
+  } catch (err) {
+    console.warn('Fallback to direct pdf.save()', err);
+    pdf.save(fileName);
+  }
 }
 
 /**
@@ -60,7 +58,7 @@ function addCanvasToPdfPage(
   canvas: HTMLCanvasElement,
   isFirstPage: boolean = false
 ): void {
-  const pdfWidth = 297; // mm
+  const pdfWidth = 297; // mm (A4 Landscape)
   const pdfHeight = 210; // mm
   const marginX = 4; // 4mm safety margin
   const marginY = 4; // 4mm safety margin
@@ -71,7 +69,7 @@ function addCanvasToPdfPage(
     pdf.addPage('a4', 'landscape');
   }
 
-  const imgData = canvas.toDataURL('image/png', 1.0);
+  const imgData = canvas.toDataURL('image/png', 0.95);
   const canvasRatio = canvas.width / canvas.height;
 
   let renderWidth = usableWidth;
@@ -105,9 +103,9 @@ export async function exportToPdf(
   }
 
   const canvas = await html2canvas(element, {
-    scale: 2, // High resolution (300 DPI equivalent)
+    scale: 1.5, // Crisp 220+ DPI print quality with fast rendering & low memory
     useCORS: true,
-    allowTaint: true,
+    allowTaint: false, // Must be FALSE to prevent tainted canvas SecurityError
     logging: false,
     backgroundColor: '#ffffff',
     scrollX: 0,
@@ -116,7 +114,7 @@ export async function exportToPdf(
     onclone: (clonedDoc) => {
       const clonedElement = clonedDoc.getElementById(elementId);
       if (clonedElement) {
-        prepareClonedElement(clonedElement, clonedDoc);
+        prepareClonedElement(clonedElement);
       }
     },
   });
@@ -129,7 +127,7 @@ export async function exportToPdf(
   });
 
   addCanvasToPdfPage(pdf, canvas, true);
-  pdf.save(fileName);
+  downloadPdfDocument(pdf, fileName);
 }
 
 /**
@@ -159,9 +157,10 @@ export async function exportAllStationsToPdf(
     const elId = elementIds[i];
     let element = document.getElementById(elId);
 
-    // If specific export canvas element not found, try fallback
+    // If specific export canvas element not found, try fallback patterns
     if (!element) {
-      element = document.getElementById(`pdf-station-${elId.replace('export-canvas-', '')}`);
+      const stnCode = elId.replace('export-canvas-', '').replace('pdf-station-', '');
+      element = document.getElementById(`pdf-station-${stnCode}`) || document.getElementById(`export-canvas-${stnCode}`);
     }
     if (!element) continue;
 
@@ -169,11 +168,14 @@ export async function exportAllStationsToPdf(
       onProgress(i + 1, elementIds.length);
     }
 
+    // Brief tick to allow browser UI thread to update progress
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
     try {
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false, // Critical: must be false so canvas is not tainted
         logging: false,
         backgroundColor: '#ffffff',
         scrollX: 0,
@@ -182,7 +184,7 @@ export async function exportAllStationsToPdf(
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.getElementById(elId) || clonedDoc.getElementById(element!.id);
           if (clonedElement) {
-            prepareClonedElement(clonedElement, clonedDoc);
+            prepareClonedElement(clonedElement);
           }
         },
       });
@@ -198,5 +200,5 @@ export async function exportAllStationsToPdf(
     throw new Error('未能擷取站點內容，請確認各站點資料');
   }
 
-  pdf.save(fileName);
+  downloadPdfDocument(pdf, fileName);
 }

@@ -324,6 +324,8 @@ export default function App() {
 
   // Status banner
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<string>('');
   const [lastSavedTime, setLastSavedTime] = useState<string | undefined>();
 
   // WO Fill Stats
@@ -518,29 +520,40 @@ export default function App() {
       await handleExportAllStationsPdf();
       return;
     }
+    setIsExporting(true);
+    setExportProgress(`正在準備 ${reportData.depotCode} 站點報告 (自動縮成1頁)...`);
     showToast('正在產生並下載 A4 PDF 報告 (包含簽名、自動縮成1頁)...');
     try {
       const fileName = `MTR_PM_Report_${reportData.depotCode}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
       await exportToPdf('pdf-report-canvas', fileName, 'landscape');
-      showToast('PDF 報告下載完成！');
+      showToast('PDF 報告下載成功！');
     } catch (err: any) {
-      console.error(err);
+      console.error('PDF export error:', err);
       showToast('下載失敗：' + (err?.message || '請重試'));
+    } finally {
+      setIsExporting(false);
+      setExportProgress('');
     }
   };
 
   // Export ALL stations to a single PDF (one station name per PDF sheet)
   const handleExportAllStationsPdf = async () => {
     const activeStations = stationsWithData.length > 0 ? stationsWithData : [currentDepot];
+    setIsExporting(true);
+    setExportProgress(`正在準備 ${activeStations.length} 個站點資料...`);
     showToast(`正在產生 ${activeStations.length} 個站點的 PDF 報告 (一站一頁)...`);
     try {
-      const elementIds = activeStations.map((code) => `export-canvas-${code}`);
+      // Prioritize on-screen elements if in ALL mode, otherwise offscreen elements
+      const elementIds = activeStations.map((code) =>
+        currentDepot === 'ALL' ? `pdf-station-${code}` : `export-canvas-${code}`
+      );
       const fileName = `MTR_PM_Report_All_${activeStations.length}_Stations_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
       await exportAllStationsToPdf(
         elementIds,
         fileName,
         'landscape',
         (curr, total) => {
+          setExportProgress(`正在轉換 PDF 頁面 (第 ${curr} / ${total} 站，一站一頁)...`);
           showToast(`正在轉換 PDF 頁面 (${curr} / ${total} 站)...`);
         }
       );
@@ -548,6 +561,9 @@ export default function App() {
     } catch (err: any) {
       console.error('Failed to export all stations to pdf', err);
       showToast('下載失敗：' + (err?.message || '請確認站點內容'));
+    } finally {
+      setIsExporting(false);
+      setExportProgress('');
     }
   };
 
@@ -652,7 +668,28 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-900 flex flex-col font-sans selection:bg-amber-200 selection:text-slate-900 pb-20">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans selection:bg-amber-200 selection:text-slate-900 pb-20 relative">
+      {/* Exporting Progress Modal Overlay */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center animate-in fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col items-center text-center space-y-3 border border-slate-200">
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+              <Download className="w-6 h-6 text-red-600 animate-bounce" />
+            </div>
+            <h3 className="font-bold text-slate-800 text-base">正在產生 PDF 並下載</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              {exportProgress || '正在處理 A4 橫向版面與簽名縮放，請稍候...'}
+            </p>
+            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mt-2">
+              <div className="bg-red-600 h-full w-3/4 animate-pulse rounded-full" />
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              自動縮成 1 站 1 頁 ‧ 包含所有設備清單與簽名
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-14 right-4 z-50 bg-slate-900 text-white px-3.5 py-2 rounded-lg shadow-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 animate-in fade-in slide-in-from-top-2">
@@ -962,17 +999,17 @@ export default function App() {
         onRemoveSignature={handleRemoveSignature}
       />
 
-      {/* Offscreen Multi-Station PDF Render Container for High-Quality Multi-Page PDF Export (One station name one PDF sheet) */}
+      {/* Offscreen Multi-Station PDF Render Container (Safely placed at -99999px so it never overlaps or causes ghosting/重影) */}
       <div
         id="all-stations-export-container"
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
+          left: '-99999px',
+          top: '-99999px',
           width: '1120px',
           zIndex: -9999,
-          opacity: 1,
           pointerEvents: 'none',
+          opacity: 1,
           backgroundColor: '#ffffff',
         }}
       >

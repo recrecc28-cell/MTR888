@@ -381,11 +381,6 @@ export const ReportPDFPreview: React.FC<Props> = ({
         style={containerStyle}
         className="bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text"
       >
-        {/* Faint Center Watermark (authentic to document preview) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.05] text-8xl font-sans font-bold text-slate-800 z-0 tracking-widest">
-          第 1 頁
-        </div>
-
         {/* --- HEADER SECTION --- */}
         <div style={headerStyle} className="text-center mb-5 relative z-10">
           <div className="font-bold text-center tracking-wide" style={{ fontSize: `${fineTuneSettings.headerTitleSize}px` }}>
