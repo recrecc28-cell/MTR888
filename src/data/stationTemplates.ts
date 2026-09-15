@@ -277,7 +277,7 @@ export function createStandardStationReport(
     overallTotals: {
       pmWoTotal: '',
       qtyTotal: totalQty > 0 ? String(totalQty) : '',
-      mTotal: '',
+      mTotal: items.length > 0 ? '100%' : '',
       m2Total: '',
       m3Total: '',
       m4Total: '',

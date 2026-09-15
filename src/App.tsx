@@ -87,10 +87,7 @@ export default function App() {
         overallTotals: {
           ...report.overallTotals,
           qtyTotal: String(filteredItems.length),
-          mTotal: String(
-            filteredItems.filter((i) => i.m && i.m.trim() !== '').length ||
-              (filteredItems.length ? '100%' : '')
-          ),
+          mTotal: filteredItems.length > 0 ? '100%' : '',
         },
       };
     }
@@ -115,7 +112,26 @@ export default function App() {
       ALL_MTR_LOCATIONS.forEach((loc) => {
         const code = loc.code;
         if (parsedMap[code] && Array.isArray(parsedMap[code].items) && parsedMap[code].items.length > 0) {
-          result[code] = parsedMap[code];
+          const rep = parsedMap[code];
+          const hasItems = rep.items.length > 0;
+          const isCount = (v: any) => typeof v === 'string' && /^\d+$/.test(v.trim());
+          result[code] = {
+            ...rep,
+            overallTotals: {
+              ...rep.overallTotals,
+              mTotal:
+                isCount(rep.overallTotals?.mTotal) || (!rep.overallTotals?.mTotal && hasItems)
+                  ? '100%'
+                  : rep.overallTotals?.mTotal || (hasItems ? '100%' : ''),
+              m3Total: isCount(rep.overallTotals?.m3Total) ? '100%' : rep.overallTotals?.m3Total || '',
+              m4Total: isCount(rep.overallTotals?.m4Total) ? '100%' : rep.overallTotals?.m4Total || '',
+              m6Total: isCount(rep.overallTotals?.m6Total) ? '100%' : rep.overallTotals?.m6Total || '',
+              yTotal: isCount(rep.overallTotals?.yTotal) ? '100%' : rep.overallTotals?.yTotal || '',
+              m18Total: isCount(rep.overallTotals?.m18Total) ? '100%' : rep.overallTotals?.m18Total || '',
+              y2Total: isCount(rep.overallTotals?.y2Total) ? '100%' : rep.overallTotals?.y2Total || '',
+              y3Total: isCount(rep.overallTotals?.y3Total) ? '100%' : rep.overallTotals?.y3Total || '',
+            },
+          };
         } else if (STATION_STANDARD_TEMPLATES[code]) {
           // Initialize with official standard template for this station
           result[code] = createStandardStationReport(code);

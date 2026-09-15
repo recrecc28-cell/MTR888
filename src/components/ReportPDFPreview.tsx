@@ -450,6 +450,29 @@ export const ReportPDFPreview: React.FC<Props> = ({
     return groups;
   }, [items, reportData.depotCode]);
 
+  // Overall Total row helpers: ensure percentage format (100%) and never counts like 1, 2, 3...
+  const getDisplayOverallTotal = (val: string | undefined, hasColItems: boolean) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) {
+      return hasColItems ? '100%' : '';
+    }
+    // If it's a numeric count like "1", "2", "3", replace with "100%"
+    if (/^\d+$/.test(trimmed)) {
+      return '100%';
+    }
+    return trimmed;
+  };
+
+  const hasItems = items.length > 0;
+  const hasM = items.some((i) => (i.m || '').trim() !== '') || hasItems;
+  const hasM3 = items.some((i) => (i.m3 || '').trim() !== '');
+  const hasM4 = items.some((i) => (i.m4 || '').trim() !== '');
+  const hasM6 = items.some((i) => (i.m6 || '').trim() !== '');
+  const hasY = items.some((i) => (i.y || '').trim() !== '');
+  const hasM18 = items.some((i) => (i.m18 || '').trim() !== '');
+  const hasY2 = items.some((i) => (i.y2 || '').trim() !== '');
+  const hasY3 = items.some((i) => (i.y3 || '').trim() !== '');
+
   return (
     <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto">
       {/* Paper Container matching screenshot proportions */}
@@ -800,97 +823,105 @@ export const ReportPDFPreview: React.FC<Props> = ({
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.mTotal}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.mTotal, hasM)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, mTotal: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, mTotal: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.m3Total}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.m3Total, hasM3)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, m3Total: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, m3Total: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.m4Total}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.m4Total, hasM4)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, m4Total: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, m4Total: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.m6Total}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.m6Total, hasM6)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, m6Total: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, m6Total: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.yTotal}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.yTotal, hasY)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, yTotal: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, yTotal: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.m18Total || ''}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.m18Total, hasM18)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, m18Total: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, m18Total: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.y2Total}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.y2Total, hasY2)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, y2Total: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, y2Total: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
                 <td style={{ ...borderStyle, ...cellPaddingStyle, width: colFreq }} className="text-center align-middle font-bold whitespace-nowrap px-0.5">
                   <EditableText
-                    value={reportData.overallTotals.y3Total || ''}
-                    onChange={(val) =>
+                    value={getDisplayOverallTotal(reportData.overallTotals.y3Total, hasY3)}
+                    onChange={(val) => {
+                      const cleanVal = /^\d+$/.test(val.trim()) ? '100%' : val;
                       onUpdateReportData({
                         ...reportData,
-                        overallTotals: { ...reportData.overallTotals, y3Total: val },
-                      })
-                    }
+                        overallTotals: { ...reportData.overallTotals, y3Total: cleanVal },
+                      });
+                    }}
                     className="text-center font-bold whitespace-nowrap min-w-0"
                   />
                 </td>
