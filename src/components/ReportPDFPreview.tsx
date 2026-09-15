@@ -450,9 +450,10 @@ export const ReportPDFPreview: React.FC<Props> = ({
     <div className="w-full flex justify-center bg-slate-100 p-2 sm:p-4 overflow-x-auto">
       {/* Paper Container matching screenshot proportions */}
       <div
-        id={containerId || "pdf-report-canvas"}
+        id={containerId || `pdf-paper-${reportData.depotCode}`}
+        data-station={reportData.depotCode}
         style={containerStyle}
-        className="bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text"
+        className="report-paper-sheet bg-white shadow-xl border border-slate-300 rounded-sm max-w-[1050px] transition-all relative select-text"
       >
         {/* --- HEADER SECTION --- */}
         <div style={headerStyle} className="text-center mb-5 relative z-10">
@@ -940,6 +941,8 @@ export const ReportPDFPreview: React.FC<Props> = ({
                       <img
                         src={signatories.preparedBySig}
                         alt="Prepared By Signature"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
                         className="max-h-11 max-w-full object-contain"
                       />
                     ) : (
@@ -977,6 +980,8 @@ export const ReportPDFPreview: React.FC<Props> = ({
                       <img
                         src={signatories.verifiedBySig}
                         alt="Verified By Signature"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
                         className="max-h-11 max-w-full object-contain"
                       />
                     ) : (
@@ -1014,6 +1019,8 @@ export const ReportPDFPreview: React.FC<Props> = ({
                       <img
                         src={signatories.endorsedBySig}
                         alt="Endorsed By Signature"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
                         className="max-h-11 max-w-full object-contain"
                       />
                     ) : (

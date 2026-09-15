@@ -5,21 +5,29 @@ import { jsPDF } from 'jspdf';
  * Clean up cloned element before html2canvas rendering:
  * - Removes interactive buttons and controls (.no-print)
  * - Preserves typed input and textarea values as HTML attributes
+ * - Pre-normalizes images for clean rendering
  */
-function prepareClonedElement(clonedElement: HTMLElement): void {
+function cleanClonedDocument(clonedDoc: Document | HTMLElement): void {
   // Remove buttons, edit tooltips, and interactive hints
-  const noPrints = clonedElement.querySelectorAll('.no-print');
+  const noPrints = clonedDoc.querySelectorAll('.no-print');
   noPrints.forEach((el) => el.remove());
 
   // Set input and textarea values as attributes so html2canvas renders typed text faithfully
-  const formInputs = clonedElement.querySelectorAll('input');
+  const formInputs = clonedDoc.querySelectorAll('input');
   formInputs.forEach((input: any) => {
     input.setAttribute('value', input.value || '');
   });
 
-  const textareas = clonedElement.querySelectorAll('textarea');
+  const textareas = clonedDoc.querySelectorAll('textarea');
   textareas.forEach((ta: any) => {
     ta.textContent = ta.value || '';
+  });
+
+  // Ensure image tags do not throw CORS or break rendering
+  const images = clonedDoc.querySelectorAll('img');
+  images.forEach((img: any) => {
+    img.crossOrigin = 'anonymous';
+    img.loading = 'eager';
   });
 }
 
@@ -104,6 +112,36 @@ function addCanvasToPdfPage(
 }
 
 /**
+ * Finds the actual paper report element by station code or generic ID
+ */
+function resolveStationElement(idOrCode: string): HTMLElement | null {
+  // 1. Direct match
+  let el = document.getElementById(idOrCode);
+  if (el) return el;
+
+  const stnCode = idOrCode.replace(/^pdf-paper-|^station-wrapper-|^pdf-station-|^export-canvas-/, '');
+
+  // 2. Exact paper sheet ID
+  el =
+    document.getElementById(`pdf-paper-${stnCode}`) ||
+    document.getElementById(`report-paper-${stnCode}`) ||
+    document.getElementById(`pdf-station-${stnCode}`);
+  if (el) return el;
+
+  // 3. Data attribute
+  el = document.querySelector(`[data-station="${stnCode}"]`) as HTMLElement;
+  if (el) return el;
+
+  // 4. Fallback generic
+  el =
+    document.getElementById('pdf-report-canvas') ||
+    (document.querySelector('.report-paper-sheet') as HTMLElement) ||
+    (document.querySelector('.station-pdf-page') as HTMLElement);
+
+  return el;
+}
+
+/**
  * Downloads a single station report as an A4 Landscape PDF.
  * Auto-scales to fit 1 station into 1 page, including all signatures and staff details.
  */
@@ -112,38 +150,45 @@ export async function exportToPdf(
   fileName: string = 'MTR_PM_Performance_Report.pdf',
   _orientation: 'landscape' | 'portrait' = 'landscape'
 ): Promise<ExportPdfResult> {
-  let element = document.getElementById(elementId);
-  if (!element) {
-    // Try smart fallbacks for single station
-    const stnCode = elementId.replace('pdf-paper-', '').replace('station-wrapper-', '').replace('pdf-station-', '');
-    element =
-      document.getElementById(`pdf-paper-${stnCode}`) ||
-      document.getElementById(`pdf-station-${stnCode}`) ||
-      document.getElementById('pdf-report-canvas') ||
-      document.querySelector('.station-pdf-page') as HTMLElement;
-  }
+  const element = resolveStationElement(elementId);
 
   if (!element) {
-    throw new Error(`找不到 PDF 報告元件 (ID: ${elementId})`);
+    throw new Error(`找不到 PDF 報告元件 (ID: ${elementId})，請確認頁面已顯示該站點報告`);
   }
 
-  const canvas = await html2canvas(element, {
-    scale: 1.5, // Crisp 220+ DPI print quality with fast rendering & low memory
-    useCORS: true,
-    allowTaint: false, // Must be FALSE to prevent tainted canvas SecurityError
-    logging: false,
-    backgroundColor: '#ffffff',
-    scrollX: 0,
-    scrollY: 0,
-    windowWidth: 1150,
-    onclone: (clonedDoc) => {
-      const targetId = element!.id;
-      const clonedElement = targetId ? clonedDoc.getElementById(targetId) : null;
-      if (clonedElement) {
-        prepareClonedElement(clonedElement);
-      }
-    },
-  });
+  let canvas: HTMLCanvasElement | null = null;
+
+  try {
+    canvas = await html2canvas(element, {
+      scale: 1.5, // Crisp print quality
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      backgroundColor: '#ffffff',
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 1150,
+      onclone: (clonedDoc) => {
+        cleanClonedDocument(clonedDoc);
+      },
+    });
+  } catch (primaryErr) {
+    console.warn(`Primary canvas render error for ${elementId}, running safe fallback:`, primaryErr);
+    canvas = await html2canvas(element, {
+      scale: 1.0,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      onclone: (clonedDoc) => {
+        cleanClonedDocument(clonedDoc);
+      },
+    });
+  }
+
+  if (!canvas) {
+    throw new Error('無法擷取頁面畫面，請重試或使用瀏覽器「列印 / 另存 PDF」功能');
+  }
 
   const pdf = new jsPDF({
     orientation: 'landscape',
@@ -173,8 +218,32 @@ export async function exportAllStationsToPdf(
   _orientation: 'landscape' | 'portrait' = 'landscape',
   onProgress?: (current: number, total: number) => void
 ): Promise<ExportPdfResult> {
-  if (!elementIds || elementIds.length === 0) {
-    throw new Error('未指定任何站點進行 PDF 下載');
+  // If elementIds is empty, try to auto-discover all rendered report pages on DOM
+  let targetElements: HTMLElement[] = [];
+
+  if (elementIds && elementIds.length > 0) {
+    elementIds.forEach((elId) => {
+      const el = resolveStationElement(elId);
+      if (el && !targetElements.includes(el)) {
+        targetElements.push(el);
+      }
+    });
+  }
+
+  // Fallback: auto-query DOM if specific IDs yielded nothing
+  if (targetElements.length === 0) {
+    const discovered = document.querySelectorAll<HTMLElement>(
+      '.station-pdf-page, .report-paper-sheet, [id^="pdf-paper-"], [id^="pdf-station-"]'
+    );
+    discovered.forEach((el) => {
+      if (!targetElements.includes(el)) {
+        targetElements.push(el);
+      }
+    });
+  }
+
+  if (targetElements.length === 0) {
+    throw new Error('畫面上未找到任何站點報表，請確認各站點資料是否已載入');
   }
 
   const pdf = new jsPDF({
@@ -186,56 +255,62 @@ export async function exportAllStationsToPdf(
 
   let renderedPagesCount = 0;
 
-  for (let i = 0; i < elementIds.length; i++) {
-    const elId = elementIds[i];
-    let element = document.getElementById(elId);
-
-    // If specific export canvas element not found, try fallback patterns
-    if (!element) {
-      const stnCode = elId.replace('pdf-paper-', '').replace('station-wrapper-', '').replace('pdf-station-', '').replace('export-canvas-', '');
-      element =
-        document.getElementById(`pdf-paper-${stnCode}`) ||
-        document.getElementById(`pdf-station-${stnCode}`) ||
-        document.getElementById(`station-wrapper-${stnCode}`) ||
-        document.getElementById(`export-canvas-${stnCode}`);
-    }
-    if (!element) continue;
+  for (let i = 0; i < targetElements.length; i++) {
+    const element = targetElements[i];
 
     if (onProgress) {
-      onProgress(i + 1, elementIds.length);
+      onProgress(i + 1, targetElements.length);
     }
 
-    // Brief tick to allow browser UI thread to update progress
+    // Brief tick to allow browser UI thread to update progress bar
     await new Promise((resolve) => setTimeout(resolve, 60));
 
+    let canvas: HTMLCanvasElement | null = null;
+
     try {
-      const canvas = await html2canvas(element, {
+      canvas = await html2canvas(element, {
         scale: 1.5,
         useCORS: true,
-        allowTaint: false, // Critical: must be false so canvas is not tainted
+        allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
         scrollX: 0,
         scrollY: 0,
         windowWidth: 1150,
         onclone: (clonedDoc) => {
-          const targetId = element!.id;
-          const clonedElement = targetId ? clonedDoc.getElementById(targetId) : null;
-          if (clonedElement) {
-            prepareClonedElement(clonedElement);
-          }
+          cleanClonedDocument(clonedDoc);
         },
       });
+    } catch (primaryErr) {
+      console.warn(`Primary canvas render error for element ${i}, trying fallback:`, primaryErr);
+      try {
+        canvas = await html2canvas(element, {
+          scale: 1.0,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          onclone: (clonedDoc) => {
+            cleanClonedDocument(clonedDoc);
+          },
+        });
+      } catch (fallbackErr) {
+        console.error(`Fallback canvas render also failed for element ${i}:`, fallbackErr);
+      }
+    }
 
-      addCanvasToPdfPage(pdf, canvas, renderedPagesCount === 0);
-      renderedPagesCount++;
-    } catch (err) {
-      console.warn(`Failed to render station ${elId} to PDF canvas:`, err);
+    if (canvas) {
+      try {
+        addCanvasToPdfPage(pdf, canvas, renderedPagesCount === 0);
+        renderedPagesCount++;
+      } catch (addErr) {
+        console.error(`Failed to append canvas to PDF page for element ${i}:`, addErr);
+      }
     }
   }
 
   if (renderedPagesCount === 0) {
-    throw new Error('未能擷取站點內容，請確認各站點資料');
+    throw new Error('未能擷取站點內容，請確認各站點資料或改用「列印 / 另存 PDF」功能');
   }
 
   const { blob, blobUrl } = downloadPdfDocument(pdf, fileName);

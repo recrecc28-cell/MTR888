@@ -30,6 +30,7 @@ import { PPTModal } from './components/PPTModal';
 import { SignatureModal, SignatoryRole } from './components/SignatureModal';
 import { PdfDownloadSuccessModal } from './components/PdfDownloadSuccessModal';
 import { exportToPdf, exportAllStationsToPdf } from './utils/pdfExport';
+import { exportSingleStationToExcel, exportAllStationsToExcel } from './utils/excelExport';
 import {
   Check,
   SlidersHorizontal,
@@ -592,10 +593,18 @@ export default function App() {
 
   // Export ALL stations to a single PDF (one station name per PDF sheet)
   const handleExportAllStationsPdf = async () => {
-    // Only export stations that have data from the uploaded Excel
-    const activeStations = stationsWithData.length > 0
-      ? stationsWithData
-      : (importedExcelStations.length > 0 ? importedExcelStations : [currentDepot]);
+    // Determine active stations to export
+    let activeStations: string[] = [];
+    if (currentDepot === 'ALL') {
+      activeStations = stationsToRender.filter((c) => c !== 'ALL');
+      if (activeStations.length === 0) {
+        activeStations = stationsWithData.length > 0 ? stationsWithData : ALL_MTR_LOCATIONS.map((l) => l.code);
+      }
+    } else {
+      activeStations = stationsWithData.length > 0
+        ? stationsWithData
+        : (importedExcelStations.length > 0 ? importedExcelStations : [currentDepot]);
+    }
 
     if (activeStations.length === 0) {
       showToast('目前沒有任何站點資料可供匯出');
@@ -603,11 +612,13 @@ export default function App() {
     }
 
     // Ensure we are in ALL mode so the elements exist on screen
-    if (currentDepot !== 'ALL') {
+    if (currentDepot !== 'ALL' && activeStations.length > 1) {
       setCurrentDepot('ALL');
       setAllStationsViewFilter('withData');
       // Wait for React to render the station DOM elements
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
 
     setIsExporting(true);
@@ -616,7 +627,7 @@ export default function App() {
 
     try {
       const elementIds = activeStations.map((code) => `pdf-paper-${code}`);
-      const fileName = `MTR_PM_Report_Stations_${activeStations.join('_')}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
+      const fileName = `MTR_PM_Report_Stations_${activeStations.length === 1 ? activeStations[0] : 'All'}_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.pdf`;
       
       const result = await exportAllStationsToPdf(
         elementIds,
@@ -642,6 +653,53 @@ export default function App() {
     } finally {
       setIsExporting(false);
       setExportProgress('');
+    }
+  };
+
+  // 下載目前畫面為 EXCEL (用戶重要要求: 我必須要用到能下載畫面幾成EXCEL功能)
+  const handleExportCurrentScreenExcel = () => {
+    try {
+      if (currentDepot === 'ALL') {
+        const activeStations = stationsToRender.filter((c) => c !== 'ALL');
+        const stnList = activeStations.length > 0
+          ? activeStations
+          : (stationsWithData.length > 0 ? stationsWithData : ALL_MTR_LOCATIONS.map((l) => l.code));
+        
+        const fileName = `MTR_PM_Report_All_Visible_Stations_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.xlsx`;
+        exportAllStationsToExcel(
+          reportsByDepot,
+          stnList,
+          reportData.reportMonthYear,
+          reportData.contractNo,
+          fileName
+        );
+        showToast(`已成功將畫面上 ${stnList.length} 個站點匯出為 Excel 試算表 (.xlsx)！`);
+      } else {
+        const result = exportSingleStationToExcel(reportData);
+        showToast(`已成功將 ${reportData.depotCode} 站點報告下載為 Excel 試算表 (${result.fileName})！`);
+      }
+    } catch (err: any) {
+      console.error('Failed to export screen to Excel:', err);
+      showToast('匯出 Excel 失敗：' + (err?.message || '請確認資料格式'));
+    }
+  };
+
+  // 下載全線 20 站為多工作表 EXCEL
+  const handleExportAllStationsExcel = () => {
+    try {
+      const allCodes = ALL_MTR_LOCATIONS.map((l) => l.code);
+      const fileName = `MTR_PM_Report_Full_20_Stations_${(reportData.reportMonthYear || '2026').replace(/\s+/g, '_')}.xlsx`;
+      exportAllStationsToExcel(
+        reportsByDepot,
+        allCodes,
+        reportData.reportMonthYear,
+        reportData.contractNo,
+        fileName
+      );
+      showToast(`已成功將全線 20 個站點完整匯出為多工作表 Excel 試算表 (.xlsx)！`);
+    } catch (err: any) {
+      console.error('Failed to export all stations to Excel:', err);
+      showToast('匯出全站 Excel 失敗：' + (err?.message || '請確認資料格式'));
     }
   };
 
@@ -807,6 +865,9 @@ export default function App() {
         onSaveToArchiveClick={handleSaveToArchive}
         onOpenArchiveHistoryClick={() => setIsArchiveHistoryOpen(true)}
         onExportPdfClick={handleExportPdf}
+        onExportExcelClick={handleExportCurrentScreenExcel}
+        onExportAllExcelClick={handleExportAllStationsExcel}
+        isAllStationsMode={currentDepot === 'ALL'}
         onPrintClick={handlePrint}
         onOpenHelpClick={() => setIsHelpOpen(true)}
         onOpenPptClick={() => setIsPptOpen(true)}
@@ -905,6 +966,17 @@ export default function App() {
             <span className="hidden xl:inline text-xs text-slate-500 font-mono mr-1">
               {reportData.reportMonthYear}
             </span>
+
+            {/* Download Screen Excel Button (用戶重要需求) */}
+            <button
+              type="button"
+              onClick={handleExportCurrentScreenExcel}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="將目前畫面上的報表內容下載為 Excel 試算表 (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <span>{currentDepot === 'ALL' ? '下載全部 EXCEL' : '下載 EXCEL'}</span>
+            </button>
 
             {/* Download All Stations Button */}
             {stationsWithData.length > 1 && (
@@ -1035,6 +1107,7 @@ export default function App() {
                   </div>
                 )}
                 <ReportPDFPreview
+                  containerId={`pdf-paper-${stnCode}`}
                   reportData={stnReport}
                   fineTuneSettings={fineTuneSettings}
                   onUpdateReportData={(newData) => {

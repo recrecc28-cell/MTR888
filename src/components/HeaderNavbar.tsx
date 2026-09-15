@@ -20,6 +20,9 @@ interface Props {
   onSaveToArchiveClick: () => void;
   onOpenArchiveHistoryClick: () => void;
   onExportPdfClick: () => void;
+  onExportExcelClick?: () => void;
+  onExportAllExcelClick?: () => void;
+  isAllStationsMode?: boolean;
   onOpenHelpClick: () => void;
   onOpenPptClick?: () => void;
   lastSavedTime?: string;
@@ -34,6 +37,9 @@ export const HeaderNavbar: React.FC<Props> = ({
   onSaveToArchiveClick,
   onOpenArchiveHistoryClick,
   onExportPdfClick,
+  onExportExcelClick,
+  onExportAllExcelClick,
+  isAllStationsMode = false,
   onOpenHelpClick,
   onOpenPptClick,
   lastSavedTime,
@@ -106,6 +112,19 @@ export const HeaderNavbar: React.FC<Props> = ({
             <span>下載 PDF</span>
           </button>
 
+          {/* Core Button: Download EXCEL (用戶重要需求: 下載畫面成 EXCEL 功能) */}
+          {onExportExcelClick && (
+            <button
+              type="button"
+              onClick={onExportExcelClick}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
+              title={isAllStationsMode ? "下載畫面全部站點 EXCEL 試算表 (.xlsx 多分頁)" : "下載畫面此站點 EXCEL 試算表 (.xlsx)"}
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-100" />
+              <span>{isAllStationsMode ? '下載全部 EXCEL' : '下載 EXCEL'}</span>
+            </button>
+          )}
+
           {/* More Options Dropdown (Cleanly collapses secondary utility features) */}
           <div className="relative" ref={menuRef}>
             <button
@@ -119,7 +138,37 @@ export const HeaderNavbar: React.FC<Props> = ({
             </button>
 
             {isMoreOpen && (
-              <div className="absolute right-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs text-slate-700 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute right-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs text-slate-700 animate-in fade-in slide-in-from-top-1">
+                {onExportExcelClick && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreOpen(false);
+                      onExportExcelClick();
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 text-emerald-800 flex items-center gap-2 transition-colors cursor-pointer font-medium"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>下載目前畫面 EXCEL (.xlsx)</span>
+                  </button>
+                )}
+
+                {onExportAllExcelClick && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreOpen(false);
+                      onExportAllExcelClick();
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 text-emerald-800 flex items-center gap-2 transition-colors cursor-pointer font-medium"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>下載全線 20 站 EXCEL (多分頁)</span>
+                  </button>
+                )}
+
+                <div className="my-1 border-t border-slate-100" />
+
                 <button
                   type="button"
                   onClick={() => {
